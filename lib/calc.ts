@@ -11,10 +11,10 @@ export const DEFAULTS = {
   lohnNebenkosten: 0.20,
   d1DlNetto: 83.20,
   d1SattelPreis: 88.60,
-  d1SattelAnteil: 1.0,
+  d1SattelAnteil: 0.70,
   d2DlNetto: 125.21,
   d2SattelPreis: 77.62,
-  d2SattelAnteil: 0.60,
+  d2SattelAnteil: 0.50,
 };
 
 export function calcMonth(

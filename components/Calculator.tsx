@@ -47,14 +47,14 @@ const DEFAULT_EINSTELLUNGEN: Einstellungen = {
     name: "Sattel-Analyse",
     uvpLabel: "99 € UVP",
     dlNetto: 83.20,
-    sattelAnteil: 100,
+    sattelAnteil: 70,
     sattelPreis: 88.60,
   },
   d2: {
     name: "Bikefitting Basis",
     uvpLabel: "149 € UVP",
     dlNetto: 125.21,
-    sattelAnteil: 60,
+    sattelAnteil: 50,
     sattelPreis: 77.62,
   },
 };

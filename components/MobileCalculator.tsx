@@ -32,11 +32,11 @@ interface DL {
 
 const DEFAULT_D1: DL = {
   name: "Sattel-Analyse", uvp: "99 € UVP",
-  dlNetto: 83.20, sattelAnteil: 100, sattelPreis: 88.60,
+  dlNetto: 83.20, sattelAnteil: 70, sattelPreis: 88.60,
 };
 const DEFAULT_D2: DL = {
   name: "Bikefitting Basis", uvp: "149 € UVP",
-  dlNetto: 125.21, sattelAnteil: 60, sattelPreis: 77.62,
+  dlNetto: 125.21, sattelAnteil: 50, sattelPreis: 77.62,
 };
 
 const TOTAL_SCREENS = 6; // 0=Start, 1–5=Wizard
