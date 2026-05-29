@@ -93,7 +93,7 @@ function berechneMonat(
   const isco    = a.iscoJahr / 12;
   const ausgaben = abschreibungMonat + technikLaufend + mitarbeiter + raum + isco;
 
-  const umsatzTermin = mixAnteil * d1Umsatz + (1 - mixAnteil) * d2Umsatz;
+  const umsatzTermin = (1 - mixAnteil) * d1Umsatz + mixAnteil * d2Umsatz;
   const einnahmen    = termine * umsatzTermin;
   const ueberschuss  = einnahmen - ausgaben;
   const cashGewinn   = ueberschuss + abschreibungMonat;
@@ -410,9 +410,9 @@ export default function Calculator() {
               </div>
               <input type="range" min={0} max={1} step={0.1} value={mix} onChange={e => setMix(Number(e.target.value))} />
               <div className="flex justify-between mt-1">
-                <span className="text-sm font-semibold" style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>{Math.round(mix * 100)} %</span>
-                <span className="text-xs text-gray-400 self-center">Ø {fmt(ergebnis.umsatzTermin, 2)} € / Termin</span>
                 <span className="text-sm font-semibold" style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>{Math.round((1 - mix) * 100)} %</span>
+                <span className="text-xs text-gray-400 self-center">Ø {fmt(ergebnis.umsatzTermin, 2)} € / Termin</span>
+                <span className="text-sm font-semibold" style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>{Math.round(mix * 100)} %</span>
               </div>
             </div>
 

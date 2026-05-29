@@ -170,9 +170,9 @@ export default function MobileCalculator() {
           <input type="range" min={0} max={1} step={0.1} value={mix}
             onChange={e => setMix(Number(e.target.value))} />
           <div className="flex justify-between">
-            <span className="font-bold text-base" style={{ color: "#3D5278" }}>{Math.round(mix * 100)} %</span>
-            <span className="text-xs text-gray-400 self-center">Ø {fmt(basis.umsatzTermin, 2)} € / Termin</span>
             <span className="font-bold text-base" style={{ color: "#3D5278" }}>{Math.round((1 - mix) * 100)} %</span>
+            <span className="text-xs text-gray-400 self-center">Ø {fmt(basis.umsatzTermin, 2)} € / Termin</span>
+            <span className="font-bold text-base" style={{ color: "#3D5278" }}>{Math.round(mix * 100)} %</span>
           </div>
         </div>
 

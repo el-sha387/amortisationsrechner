@@ -40,7 +40,7 @@ export function calcMonth(
   const isco    = iscoJahr / 12;
   const ausgaben = abschreibung + technikLaufend + mitarbeiter + raum + isco;
 
-  const umsatzTermin = mixAnteil * d1Umsatz + (1 - mixAnteil) * d2Umsatz;
+  const umsatzTermin = (1 - mixAnteil) * d1Umsatz + mixAnteil * d2Umsatz;
   const einnahmen    = termine * umsatzTermin;
   const ueberschuss  = einnahmen - ausgaben;
   const cashGewinn   = ueberschuss + abschreibung;
