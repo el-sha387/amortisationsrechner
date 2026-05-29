@@ -955,7 +955,7 @@ export default function MobileCalculator() {
 
   return (
     <div id="wizard-app"
-      className={`flex flex-col h-screen mx-auto relative ${isTablet ? "max-w-2xl" : "max-w-md"}`}
+      className={`no-print flex flex-col h-screen mx-auto relative ${isTablet ? "max-w-2xl" : "max-w-md"}`}
       style={{ background: isStart ? "#3D5278" : "#f4f6f9" }}>
 
       {settingsPanel}

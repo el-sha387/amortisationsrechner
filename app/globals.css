@@ -75,7 +75,7 @@ input[type="range"]::-webkit-slider-thumb {
 /* ─── Print / PDF ─────────────────────────────────────────────────────────── */
 
 @media print {
-  body > * { display: none !important; }
+  .no-print { display: none !important; }
   #print-report { display: block !important; }
   @page { margin: 0; size: A4; }
 }
