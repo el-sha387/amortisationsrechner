@@ -1,16 +1,31 @@
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap');
+
+@font-face {
+  font-family: 'VitoWide';
+  src: url('/fonts/VitoWideBold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
 
 :root {
   --background: #f4f6f9;
   --foreground: #1a1a2e;
   --lime: #AADD00;
   --navy: #3D5278;
+  --font-heading: 'VitoWide', 'Jost', Arial, sans-serif;
+  --font-body: 'Jost', Arial, sans-serif;
 }
 
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: var(--font-body);
+}
+
+h1, h2, h3 {
+  font-family: var(--font-heading);
 }
 
 input[type="range"] {
