@@ -27,16 +27,17 @@ interface DL {
   uvp:          string;
   dlNetto:      number;
   sattelAnteil: number;   // 0–100 %
-  sattelPreis:  number;
+  sattelUvp:    number;   // Verkaufspreis netto
+  sattelEK:     number;   // Händler-Einkaufspreis netto
 }
 
 const DEFAULT_D1: DL = {
   name: "Sattel-Analyse", uvp: "99 € UVP",
-  dlNetto: 83.20, sattelAnteil: 70, sattelPreis: 88.60,
+  dlNetto: 83.20, sattelAnteil: 70, sattelUvp: 88.60, sattelEK: 0,
 };
 const DEFAULT_D2: DL = {
   name: "Bikefitting Basis", uvp: "149 € UVP",
-  dlNetto: 125.21, sattelAnteil: 50, sattelPreis: 77.62,
+  dlNetto: 125.21, sattelAnteil: 50, sattelUvp: 77.62, sattelEK: 0,
 };
 
 const TOTAL_SCREENS = 6; // 0=Start, 1–5=Wizard
@@ -47,8 +48,8 @@ function berechne(
   investition: number, termine: number, gehalt: number,
   raumkosten: number, mix: number, d1: DL, d2: DL
 ) {
-  const d1Umsatz = d1.dlNetto + (d1.sattelAnteil / 100) * d1.sattelPreis;
-  const d2Umsatz = d2.dlNetto + (d2.sattelAnteil / 100) * d2.sattelPreis;
+  const d1Umsatz = d1.dlNetto + (d1.sattelAnteil / 100) * (d1.sattelUvp - d1.sattelEK);
+  const d2Umsatz = d2.dlNetto + (d2.sattelAnteil / 100) * (d2.sattelUvp - d2.sattelEK);
 
   const abschreibung   = investition / ANNAHMEN.abschreibungMonate;
   const technikLaufend = ANNAHMEN.lizenzMonat + ANNAHMEN.ersatzfolieGesamt / ANNAHMEN.abschreibungMonate;
@@ -156,6 +157,35 @@ function SettingsInput({
         />
         {suffix && <span className="text-xs text-gray-400 w-5">{suffix}</span>}
       </div>
+    </div>
+  );
+}
+
+function SettingsInputWithHint({
+  label, value, onChange, suffix, step = 1, hint,
+}: {
+  label: string; value: number; onChange: (v: number) => void;
+  suffix?: string; step?: number; hint?: string;
+}) {
+  return (
+    <div className="py-2">
+      <div className="flex items-center justify-between">
+        <span className="text-sm text-gray-600 flex-1">{label}</span>
+        <div className="flex items-center gap-1.5">
+          <input
+            type="number" value={value} step={step} min={0}
+            onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= 0) onChange(v); }}
+            className="w-24 border-2 rounded-xl px-2 py-1.5 text-right font-semibold text-sm focus:outline-none"
+            style={{ borderColor: "#e5e7eb", color: "#1f2937", fontFamily: "var(--font-body)" }}
+          />
+          {suffix && <span className="text-xs text-gray-400 w-5">{suffix}</span>}
+        </div>
+      </div>
+      {hint && (
+        <div className="text-xs mt-1 font-semibold" style={{ color: "#AADD00" }}>
+          ↳ {hint}
+        </div>
+      )}
     </div>
   );
 }
@@ -280,16 +310,19 @@ export default function MobileCalculator() {
                   {d1.name}
                 </span>
                 <span className="text-xs text-gray-400 ml-auto">
-                  Ø {fmt(d1.dlNetto + (d1.sattelAnteil / 100) * d1.sattelPreis, 2)} € / Termin
+                  Ø {fmt(d1.dlNetto + (d1.sattelAnteil / 100) * (d1.sattelUvp - d1.sattelEK), 2)} € / Termin
                 </span>
               </div>
-              <div className="rounded-2xl border border-gray-100 px-4 py-1 space-y-0 divide-y divide-gray-50">
+              <div className="rounded-2xl border border-gray-100 px-4 py-1 divide-y divide-gray-50">
                 <SettingsInput label="DL-Preis netto" value={d1.dlNetto}
                   onChange={v => setD1(p => ({ ...p, dlNetto: v }))} suffix="€" step={0.5} />
                 <SettingsInput label="Sattelanteil" value={d1.sattelAnteil}
                   onChange={v => setD1(p => ({ ...p, sattelAnteil: Math.min(100, v) }))} suffix="%" step={5} />
-                <SettingsInput label="Sattelpreis netto" value={d1.sattelPreis}
-                  onChange={v => setD1(p => ({ ...p, sattelPreis: v }))} suffix="€" step={1} />
+                <SettingsInput label="UVP Sattel netto" value={d1.sattelUvp}
+                  onChange={v => setD1(p => ({ ...p, sattelUvp: v }))} suffix="€" step={1} />
+                <SettingsInputWithHint label="Händler EK netto" value={d1.sattelEK}
+                  onChange={v => setD1(p => ({ ...p, sattelEK: v }))} suffix="€" step={1}
+                  hint={`Marge: ${fmt(d1.sattelUvp - d1.sattelEK, 2)} €`} />
               </div>
             </div>
 
@@ -302,16 +335,19 @@ export default function MobileCalculator() {
                   {d2.name}
                 </span>
                 <span className="text-xs text-gray-400 ml-auto">
-                  Ø {fmt(d2.dlNetto + (d2.sattelAnteil / 100) * d2.sattelPreis, 2)} € / Termin
+                  Ø {fmt(d2.dlNetto + (d2.sattelAnteil / 100) * (d2.sattelUvp - d2.sattelEK), 2)} € / Termin
                 </span>
               </div>
-              <div className="rounded-2xl border border-gray-100 px-4 py-1 space-y-0 divide-y divide-gray-50">
+              <div className="rounded-2xl border border-gray-100 px-4 py-1 divide-y divide-gray-50">
                 <SettingsInput label="DL-Preis netto" value={d2.dlNetto}
                   onChange={v => setD2(p => ({ ...p, dlNetto: v }))} suffix="€" step={0.5} />
                 <SettingsInput label="Sattelanteil" value={d2.sattelAnteil}
                   onChange={v => setD2(p => ({ ...p, sattelAnteil: Math.min(100, v) }))} suffix="%" step={5} />
-                <SettingsInput label="Sattelpreis netto" value={d2.sattelPreis}
-                  onChange={v => setD2(p => ({ ...p, sattelPreis: v }))} suffix="€" step={1} />
+                <SettingsInput label="UVP Sattel netto" value={d2.sattelUvp}
+                  onChange={v => setD2(p => ({ ...p, sattelUvp: v }))} suffix="€" step={1} />
+                <SettingsInputWithHint label="Händler EK netto" value={d2.sattelEK}
+                  onChange={v => setD2(p => ({ ...p, sattelEK: v }))} suffix="€" step={1}
+                  hint={`Marge: ${fmt(d2.sattelUvp - d2.sattelEK, 2)} €`} />
               </div>
             </div>
 

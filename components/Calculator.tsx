@@ -11,11 +11,12 @@ interface Stufe {
 }
 
 interface Dienstleistung {
-  name: string;       // Anzeigename im Mix-Slider
-  uvpLabel: string;   // Text unter dem Button / Slider, z. B. "89 € UVP"
-  dlNetto: number;    // Netto-DL-Preis für die Berechnung
+  name: string;         // Anzeigename im Mix-Slider
+  uvpLabel: string;     // Text unter dem Button / Slider, z. B. "99 € UVP"
+  dlNetto: number;      // Netto-DL-Preis für die Berechnung
   sattelAnteil: number; // Anteil Termine mit Sattelverkauf (0–100 %)
-  sattelPreis: number;  // Netto-Sattelpreis
+  sattelUvp: number;    // Sattel-Verkaufspreis netto (UVP)
+  sattelEK: number;     // Händler-Einkaufspreis netto
 }
 
 interface Einstellungen {
@@ -48,14 +49,16 @@ const DEFAULT_EINSTELLUNGEN: Einstellungen = {
     uvpLabel: "99 € UVP",
     dlNetto: 83.20,
     sattelAnteil: 70,
-    sattelPreis: 88.60,
+    sattelUvp: 88.60,
+    sattelEK: 0,
   },
   d2: {
     name: "Bikefitting Basis",
     uvpLabel: "149 € UVP",
     dlNetto: 125.21,
     sattelAnteil: 50,
-    sattelPreis: 77.62,
+    sattelUvp: 77.62,
+    sattelEK: 0,
   },
 };
 
@@ -82,8 +85,8 @@ function berechneMonat(
   a: Annahmen,
   e: Einstellungen
 ) {
-  const d1Umsatz = e.d1.dlNetto + (e.d1.sattelAnteil / 100) * e.d1.sattelPreis;
-  const d2Umsatz = e.d2.dlNetto + (e.d2.sattelAnteil / 100) * e.d2.sattelPreis;
+  const d1Umsatz = e.d1.dlNetto + (e.d1.sattelAnteil / 100) * (e.d1.sattelUvp - e.d1.sattelEK);
+  const d2Umsatz = e.d2.dlNetto + (e.d2.sattelAnteil / 100) * (e.d2.sattelUvp - e.d2.sattelEK);
 
   const abschreibungMonat = investition / a.abschreibungMonate;
   const technikLaufend    = a.lizenzMonat + a.ersatzfolieGesamt / a.abschreibungMonate;
@@ -582,7 +585,7 @@ export default function Calculator() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {(["d1", "d2"] as const).map(dl => {
               const d = einstellungen[dl];
-              const umsatz = d.dlNetto + (d.sattelAnteil / 100) * d.sattelPreis;
+              const umsatz = d.dlNetto + (d.sattelAnteil / 100) * (d.sattelUvp - d.sattelEK);
               return (
                 <div key={dl} className="bg-white rounded-2xl p-5 shadow-sm">
                   <h2 className="font-bold text-sm uppercase tracking-wide mb-1" style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
@@ -608,9 +611,13 @@ export default function Calculator() {
                         <NumInput label="Anteil Termine mit Sattelverkauf" value={d.sattelAnteil}
                           onChange={v => setD(dl, { sattelAnteil: Math.min(100, Math.max(0, v)) })}
                           suffix="%" step={5} min={0} />
-                        <NumInput label="Sattelpreis (netto)" value={d.sattelPreis}
-                          onChange={v => setD(dl, { sattelPreis: v })}
+                        <NumInput label="UVP Sattel (netto)" value={d.sattelUvp}
+                          onChange={v => setD(dl, { sattelUvp: v })}
                           suffix="€" step={1} min={0} />
+                        <NumInput label="Händler EK (netto)" value={d.sattelEK}
+                          onChange={v => setD(dl, { sattelEK: v })}
+                          suffix="€" step={1} min={0}
+                          hint={`Marge / Sattel: ${fmt(d.sattelUvp - d.sattelEK, 2)} €`} />
                       </div>
                     </div>
                   </div>

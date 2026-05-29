@@ -9,12 +9,14 @@ export const DEFAULTS = {
   arbeitszeitTermin: 1.25,
   vollzeitStunden: 172,
   lohnNebenkosten: 0.20,
-  d1DlNetto: 83.20,
-  d1SattelPreis: 88.60,
-  d1SattelAnteil: 0.70,
-  d2DlNetto: 125.21,
-  d2SattelPreis: 77.62,
-  d2SattelAnteil: 0.50,
+  d1DlNetto:      83.20,
+  d1SattelUvp:    88.60,   // UVP netto (Verkaufspreis)
+  d1SattelEK:      0,      // Händler-Einkaufspreis
+  d1SattelAnteil:  0.70,
+  d2DlNetto:      125.21,
+  d2SattelUvp:    77.62,
+  d2SattelEK:      0,
+  d2SattelAnteil:  0.50,
 };
 
 export function calcMonth(
@@ -22,15 +24,16 @@ export function calcMonth(
   termine: number,
   gehalt: number,
   raumkosten: number,
-  mixAnteil: number  // 1 = 100% D1, 0 = 100% D2
+  mixAnteil: number  // 0 = 100% D1, 1 = 100% D2
 ) {
   const { lizenzMonat, ersatzfolieGesamt, abschreibungMonate, raumQm,
           iscoJahr, arbeitszeitTermin, vollzeitStunden, lohnNebenkosten,
-          d1DlNetto, d1SattelPreis, d1SattelAnteil,
-          d2DlNetto, d2SattelPreis, d2SattelAnteil } = DEFAULTS;
+          d1DlNetto, d1SattelUvp, d1SattelEK, d1SattelAnteil,
+          d2DlNetto, d2SattelUvp, d2SattelEK, d2SattelAnteil } = DEFAULTS;
 
-  const d1Umsatz = d1DlNetto + d1SattelAnteil * d1SattelPreis;
-  const d2Umsatz = d2DlNetto + d2SattelAnteil * d2SattelPreis;
+  // Marge = VK − EK; bei EK=0 fließt der volle VK ein
+  const d1Umsatz = d1DlNetto + d1SattelAnteil * (d1SattelUvp - d1SattelEK);
+  const d2Umsatz = d2DlNetto + d2SattelAnteil * (d2SattelUvp - d2SattelEK);
 
   const abschreibung   = investition / abschreibungMonate;
   const technikLaufend = lizenzMonat + ersatzfolieGesamt / abschreibungMonate;
