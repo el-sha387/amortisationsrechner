@@ -46,8 +46,8 @@ export default function AmortizationChart({ investition, ueberschussMonat, break
           domain={[yMin, yMax]}
         />
         <Tooltip
-          formatter={(val: number) =>
-            [`${val.toLocaleString("de-DE")} €`, "Kum. Ergebnis"]
+          formatter={(val) =>
+            [`${Number(val).toLocaleString("de-DE")} €`, "Kum. Ergebnis"]
           }
           labelFormatter={(l) => l === 0 ? "Start" : `Monat ${l}`}
         />
