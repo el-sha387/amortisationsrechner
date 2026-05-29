@@ -31,9 +31,9 @@ export function calcMonth(
           d1DlNetto, d1SattelUvp, d1SattelEK, d1SattelAnteil,
           d2DlNetto, d2SattelUvp, d2SattelEK, d2SattelAnteil } = DEFAULTS;
 
-  // Marge = VK − EK; bei EK=0 fließt der volle VK ein
-  const d1Umsatz = d1DlNetto + d1SattelAnteil * (d1SattelUvp - d1SattelEK);
-  const d2Umsatz = d2DlNetto + d2SattelAnteil * (d2SattelUvp - d2SattelEK);
+  // Marge = (UVP − EK) / 1.19 → netto nach MwSt
+  const d1Umsatz = d1DlNetto + d1SattelAnteil * ((d1SattelUvp - d1SattelEK) / 1.19);
+  const d2Umsatz = d2DlNetto + d2SattelAnteil * ((d2SattelUvp - d2SattelEK) / 1.19);
 
   const abschreibung   = investition / abschreibungMonate;
   const technikLaufend = lizenzMonat + ersatzfolieGesamt / abschreibungMonate;

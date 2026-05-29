@@ -48,8 +48,8 @@ function berechne(
   investition: number, termine: number, gehalt: number,
   raumkosten: number, mix: number, d1: DL, d2: DL
 ) {
-  const d1Umsatz = d1.dlNetto + (d1.sattelAnteil / 100) * (d1.sattelUvp - d1.sattelEK);
-  const d2Umsatz = d2.dlNetto + (d2.sattelAnteil / 100) * (d2.sattelUvp - d2.sattelEK);
+  const d1Umsatz = d1.dlNetto + (d1.sattelAnteil / 100) * ((d1.sattelUvp - d1.sattelEK) / 1.19);
+  const d2Umsatz = d2.dlNetto + (d2.sattelAnteil / 100) * ((d2.sattelUvp - d2.sattelEK) / 1.19);
 
   const abschreibung   = investition / ANNAHMEN.abschreibungMonate;
   const technikLaufend = ANNAHMEN.lizenzMonat + ANNAHMEN.ersatzfolieGesamt / ANNAHMEN.abschreibungMonate;
@@ -310,7 +310,7 @@ export default function MobileCalculator() {
                   {d1.name}
                 </span>
                 <span className="text-xs text-gray-400 ml-auto">
-                  Ø {fmt(d1.dlNetto + (d1.sattelAnteil / 100) * (d1.sattelUvp - d1.sattelEK), 2)} € / Termin
+                  Ø {fmt(d1.dlNetto + (d1.sattelAnteil / 100) * ((d1.sattelUvp - d1.sattelEK) / 1.19), 2)} € / Termin
                 </span>
               </div>
               <div className="rounded-2xl border border-gray-100 px-4 py-1 divide-y divide-gray-50">
@@ -322,7 +322,7 @@ export default function MobileCalculator() {
                   onChange={v => setD1(p => ({ ...p, sattelUvp: v }))} suffix="€" step={1} />
                 <SettingsInputWithHint label="Händler EK netto" value={d1.sattelEK}
                   onChange={v => setD1(p => ({ ...p, sattelEK: v }))} suffix="€" step={1}
-                  hint={`Marge: ${fmt(d1.sattelUvp - d1.sattelEK, 2)} €`} />
+                  hint={`Marge netto (abzgl. MwSt): ${fmt((d1.sattelUvp - d1.sattelEK) / 1.19, 2)} €`} />
               </div>
             </div>
 
@@ -335,7 +335,7 @@ export default function MobileCalculator() {
                   {d2.name}
                 </span>
                 <span className="text-xs text-gray-400 ml-auto">
-                  Ø {fmt(d2.dlNetto + (d2.sattelAnteil / 100) * (d2.sattelUvp - d2.sattelEK), 2)} € / Termin
+                  Ø {fmt(d2.dlNetto + (d2.sattelAnteil / 100) * ((d2.sattelUvp - d2.sattelEK) / 1.19), 2)} € / Termin
                 </span>
               </div>
               <div className="rounded-2xl border border-gray-100 px-4 py-1 divide-y divide-gray-50">
@@ -347,7 +347,7 @@ export default function MobileCalculator() {
                   onChange={v => setD2(p => ({ ...p, sattelUvp: v }))} suffix="€" step={1} />
                 <SettingsInputWithHint label="Händler EK netto" value={d2.sattelEK}
                   onChange={v => setD2(p => ({ ...p, sattelEK: v }))} suffix="€" step={1}
-                  hint={`Marge: ${fmt(d2.sattelUvp - d2.sattelEK, 2)} €`} />
+                  hint={`Marge netto (abzgl. MwSt): ${fmt((d2.sattelUvp - d2.sattelEK) / 1.19, 2)} €`} />
               </div>
             </div>
 

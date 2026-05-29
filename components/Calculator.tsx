@@ -85,8 +85,8 @@ function berechneMonat(
   a: Annahmen,
   e: Einstellungen
 ) {
-  const d1Umsatz = e.d1.dlNetto + (e.d1.sattelAnteil / 100) * (e.d1.sattelUvp - e.d1.sattelEK);
-  const d2Umsatz = e.d2.dlNetto + (e.d2.sattelAnteil / 100) * (e.d2.sattelUvp - e.d2.sattelEK);
+  const d1Umsatz = e.d1.dlNetto + (e.d1.sattelAnteil / 100) * ((e.d1.sattelUvp - e.d1.sattelEK) / 1.19);
+  const d2Umsatz = e.d2.dlNetto + (e.d2.sattelAnteil / 100) * ((e.d2.sattelUvp - e.d2.sattelEK) / 1.19);
 
   const abschreibungMonat = investition / a.abschreibungMonate;
   const technikLaufend    = a.lizenzMonat + a.ersatzfolieGesamt / a.abschreibungMonate;
@@ -585,7 +585,7 @@ export default function Calculator() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {(["d1", "d2"] as const).map(dl => {
               const d = einstellungen[dl];
-              const umsatz = d.dlNetto + (d.sattelAnteil / 100) * (d.sattelUvp - d.sattelEK);
+              const umsatz = d.dlNetto + (d.sattelAnteil / 100) * ((d.sattelUvp - d.sattelEK) / 1.19);
               return (
                 <div key={dl} className="bg-white rounded-2xl p-5 shadow-sm">
                   <h2 className="font-bold text-sm uppercase tracking-wide mb-1" style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
@@ -617,7 +617,7 @@ export default function Calculator() {
                         <NumInput label="Händler EK (netto)" value={d.sattelEK}
                           onChange={v => setD(dl, { sattelEK: v })}
                           suffix="€" step={1} min={0}
-                          hint={`Marge / Sattel: ${fmt(d.sattelUvp - d.sattelEK, 2)} €`} />
+                          hint={`Marge netto (abzgl. MwSt): ${fmt((d.sattelUvp - d.sattelEK) / 1.19, 2)} €`} />
                       </div>
                     </div>
                   </div>
