@@ -13,18 +13,18 @@ import {
 
 interface Props {
   investition: number;
-  ueberschussMonat: number;
+  cashGewinnMonat: number;
   breakEvenMonate: number;
 }
 
-export default function AmortizationChart({ investition, ueberschussMonat, breakEvenMonate }: Props) {
+export default function AmortizationChart({ investition, cashGewinnMonat, breakEvenMonate }: Props) {
   const data = Array.from({ length: 37 }, (_, i) => ({
     monat: i,
-    kumuliert: Math.round(ueberschussMonat * i - investition),
+    kumuliert: Math.round(cashGewinnMonat * i - investition),
   }));
 
   const yMin = Math.min(-investition, -500);
-  const yMax = Math.max(ueberschussMonat * 36 - investition + 500, 500);
+  const yMax = Math.max(cashGewinnMonat * 36 - investition + 500, 500);
 
   const beLabel = isFinite(breakEvenMonate) && breakEvenMonate <= 36
     ? `Break-Even: Monat ${Math.ceil(breakEvenMonate)}`

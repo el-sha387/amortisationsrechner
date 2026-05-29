@@ -43,36 +43,48 @@ function berechne(
   mixAnteil: number,
   a: Annahmen
 ) {
-  const technik =
-    investition / a.abschreibungMonate +
-    a.lizenzMonat +
-    a.ersatzfolieGesamt / a.abschreibungMonate;
+  const abschreibungMonat = investition / a.abschreibungMonate;
+  const technikLaufend = a.lizenzMonat + a.ersatzfolieGesamt / a.abschreibungMonate;
   const mitarbeiter =
     gehalt *
     (1 + a.lohnNebenkosten / 100) *
     ((termine * a.arbeitszeitTermin) / a.vollzeitStunden);
   const raum = raumkosten * a.raumQm;
   const isco = a.iscoJahr / 12;
-  const ausgaben = technik + mitarbeiter + raum + isco;
+
+  // Monatliche Ausgaben inkl. Abschreibung (GuV-Sicht)
+  const ausgaben = abschreibungMonat + technikLaufend + mitarbeiter + raum + isco;
 
   const umsatzTermin = mixAnteil * a.d1Umsatz + (1 - mixAnteil) * a.d2Umsatz;
   const einnahmen = termine * umsatzTermin;
+
+  // Buchgewinn nach Abschreibung
   const ueberschuss = einnahmen - ausgaben;
 
-  const breakEvenMonate = ueberschuss > 0 ? investition / ueberschuss : Infinity;
+  // Cash-Gewinn (vor Abschreibung) — Basis für Amortisationsrechnung
+  // Die Investition wurde einmalig bezahlt; die Abschreibung ist ein buchhalterischer Kostenpunkt.
+  const cashGewinn = ueberschuss + abschreibungMonat;
+
+  // Amortisation: Wie viele Monate Cash-Gewinn decken die Investition?
+  const breakEvenMonate = cashGewinn > 0 ? investition / cashGewinn : Infinity;
+
+  // Monatlicher Kostendeckungs-Break-Even in Terminen (Excel-Formel)
   const breakEvenTermine =
     ueberschuss > 0
       ? ausgaben / (umsatzTermin - ausgaben / termine)
       : Infinity;
 
+  // 3-Jahres-Perspektive: Abschreibung ist in ueberschuss bereits enthalten →
+  // kein erneuter Abzug der Investition (wäre Doppelzählung)
   const gewinnJahr1 = ueberschuss * 12;
-  const gewinnJahr3 = ueberschuss * 36 - investition;
+  const gewinnJahr3 = ueberschuss * 36;
   const roiJahr3 = investition > 0 ? (gewinnJahr3 / investition) * 100 : 0;
 
   return {
     ausgaben,
     einnahmen,
     ueberschuss,
+    cashGewinn,
     breakEvenMonate,
     breakEvenTermine,
     gewinnJahr1,
@@ -357,7 +369,7 @@ export default function Calculator() {
               </h3>
               <AmortizationChart
                 investition={investition}
-                ueberschussMonat={ergebnis.ueberschuss}
+                cashGewinnMonat={ergebnis.cashGewinn}
                 breakEvenMonate={ergebnis.breakEvenMonate}
               />
             </div>
