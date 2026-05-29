@@ -265,7 +265,7 @@ function PrintReport({ termine, mix, gehalt, raumkosten, investition, optionName
   const velogicMonat1 = velogicLiz.jahr1 / 12;
 
   return (
-    <div id="print-report" style={{ display: "none" }}>
+    <div id="print-report" className="print-only">
     <div style={s.page}>
 
       {/* ── Header ── */}

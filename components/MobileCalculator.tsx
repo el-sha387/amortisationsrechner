@@ -261,7 +261,7 @@ function PrintReport({ termine, mix, gehalt, raumkosten, investition, optionName
     ? ((basis.ueberschuss + variJ2.ueberschuss + variJ3.ueberschuss) * 12 / investition) * 100 : 0;
 
   return (
-    <div id="print-report" style={{ display: "none" }}>
+    <div id="print-report" className="print-only">
     <div style={{ fontFamily: "Arial, sans-serif", color: "#1f2937", background: "white",
       padding: "36px 44px", maxWidth: 780, margin: "0 auto", fontSize: 13 }}>
 
