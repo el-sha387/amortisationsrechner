@@ -15,13 +15,18 @@ interface DL {
 }
 
 const DEFAULT_PRODUKTE: Produkt[] = [
-  { id: "sattel-app",   name: "Saddle Pressure App",     preis: 2490 },
-  { id: "sattel-map",   name: "Saddle Pressure Mapping", preis: 4990 },
-  { id: "fuss-map",     name: "Foot Pressure Mapping",   preis: 4990 },
-  { id: "bundle-sf",    name: "Bundle Saddle + Foot",    preis: 7990 },
-  { id: "velogic-ess",  name: "Velogic Essentials",      preis: 1849 },
-  { id: "velogic-pro",  name: "Velogic PRO",             preis: 2990 },
-  { id: "advantage360", name: "Advantage 360 (p.a.)",    preis:  490 },
+  // Messtechnik
+  { id: "sattel-app",    name: "Sattel-Druck App",             preis: 2490 },
+  { id: "sattel-map",    name: "Sattel-Druckmessung",          preis: 4990 },
+  { id: "fuss-map",      name: "Fußdruckmessung",              preis: 4990 },
+  { id: "bundle-sf",     name: "Bundle Sattel + Fuß",          preis: 7990 },
+  { id: "velogic-ess",   name: "Velogic Essentials (1 Kamera)",preis: 1849 },
+  { id: "velogic-pro",   name: "Velogic PRO (2 Kameras)",      preis: 2990 },
+  { id: "advantage360",  name: "Advantage 360 (jährl.)",       preis:  490 },
+  // Starter Kits Komponenten
+  { id: "kit-sattel-crmo",   name: "Starter Kit Sättel 5× CrMo (EK)",      preis: Math.round(5  * 52.92) },   // 265 €
+  { id: "kit-sattel-titan",  name: "Starter Kit Sättel 10× Titan (EK)",     preis: Math.round(10 * 92.60) },   // 926 €
+  { id: "kit-push-einlagen", name: "Starter Kit PUSH Einlagen 9 Paar (EK)", preis: Math.round(9  * 68.80) },   // 619 €
 ];
 
 const DEFAULT_OPTIONEN: Option[] = [
