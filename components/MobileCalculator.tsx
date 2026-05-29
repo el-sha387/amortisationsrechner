@@ -5,7 +5,11 @@ import { fmt } from "@/lib/calc";
 
 // ─── Interfaces & Daten ──────────────────────────────────────────────────────
 
-interface Produkt { id: string; name: string; preis: number; }
+interface Produkt {
+  id: string; name: string; preis: number;
+  lizenzJahr1?: number;
+  lizenzJahrFolge?: number;
+}
 interface Option  { name: string; produktIds: string[]; }
 
 interface DL {
@@ -20,8 +24,8 @@ const DEFAULT_PRODUKTE: Produkt[] = [
   { id: "sattel-map",    name: "Sattel-Druckmessung",          preis: 4990 },
   { id: "fuss-map",      name: "Fußdruckmessung",              preis: 4990 },
   { id: "bundle-sf",     name: "Bundle Sattel + Fuß",          preis: 7990 },
-  { id: "velogic-ess",   name: "Velogic Essentials (1 Kamera)",preis: 1849 },
-  { id: "velogic-pro",   name: "Velogic PRO (2 Kameras)",      preis: 2990 },
+  { id: "velogic-ess",  name: "Velogic Essentials (1 Kamera)", preis: 1849, lizenzJahr1: 2800, lizenzJahrFolge: 1150 },
+  { id: "velogic-pro",  name: "Velogic PRO (2 Kameras)",       preis: 2990, lizenzJahr1: 4200, lizenzJahrFolge: 1700 },
   { id: "advantage360",  name: "Advantage 360 (jährl.)",       preis:  490 },
   // Starter Kits Komponenten
   { id: "kit-sattel-crmo",   name: "Starter Kit Sättel 5× CrMo (EK)",      preis: Math.round(5  * 52.92) },   // 265 €
@@ -65,14 +69,26 @@ function getOptionModule(opt: Option, produkte: Produkt[]): Produkt[] {
   return opt.produktIds.map(pid => produkte.find(p => p.id === pid)).filter(Boolean) as Produkt[];
 }
 
+function getVelogicLizenzen(optionIdx: number | null, optionen: Option[], produkte: Produkt[]) {
+  if (optionIdx === null) return { jahr1: 0, jahrFolge: 0 };
+  return optionen[optionIdx].produktIds.reduce(
+    (acc, pid) => {
+      const p = produkte.find(x => x.id === pid);
+      return p ? { jahr1: acc.jahr1 + (p.lizenzJahr1 ?? 0), jahrFolge: acc.jahrFolge + (p.lizenzJahrFolge ?? 0) } : acc;
+    },
+    { jahr1: 0, jahrFolge: 0 }
+  );
+}
+
 function berechne(
   investition: number, termine: number, gehalt: number,
-  raumkosten: number, mix: number, d1: DL, d2: DL
+  raumkosten: number, mix: number, d1: DL, d2: DL,
+  velogicLizenzMonat = 0
 ) {
   const d1Umsatz = d1.dlNetto + (d1.sattelAnteil / 100) * ((d1.sattelUvp - d1.sattelEK) / 1.19);
   const d2Umsatz = d2.dlNetto + (d2.sattelAnteil / 100) * ((d2.sattelUvp - d2.sattelEK) / 1.19);
   const abschreibung   = investition / ANNAHMEN.abschreibungMonate;
-  const technikLaufend = ANNAHMEN.lizenzMonat + ANNAHMEN.ersatzfolieGesamt / ANNAHMEN.abschreibungMonate;
+  const technikLaufend = ANNAHMEN.lizenzMonat + ANNAHMEN.ersatzfolieGesamt / ANNAHMEN.abschreibungMonate + velogicLizenzMonat;
   const mitarbeiter    = gehalt * (1 + ANNAHMEN.lohnNebenkosten) *
                          ((termine * ANNAHMEN.arbeitszeitTermin) / ANNAHMEN.vollzeitStunden);
   const raum    = raumkosten * ANNAHMEN.raumQm;
@@ -391,11 +407,17 @@ export default function MobileCalculator() {
     setTimeout(() => window.print(), 50);
   }
 
-  // Berechnungen
-  const basis  = useMemo(() => berechne(investition, termine,        gehalt, raumkosten, mix, d1, d2), [investition, termine, gehalt, raumkosten, mix, d1, d2]);
-  const starr  = useMemo(() => berechne(investition, termine,        gehalt, raumkosten, mix, d1, d2), [investition, termine, gehalt, raumkosten, mix, d1, d2]);
-  const variJ2 = useMemo(() => berechne(investition, termine * 1.10, gehalt, raumkosten, mix, d1, d2), [investition, termine, gehalt, raumkosten, mix, d1, d2]);
-  const variJ3 = useMemo(() => berechne(investition, termine * 1.20, gehalt, raumkosten, mix, d1, d2), [investition, termine, gehalt, raumkosten, mix, d1, d2]);
+  // Velogic-Lizenzen (Jahr 1 vs. Folgejahre)
+  const velogicLiz = useMemo(
+    () => getVelogicLizenzen(optionIdx, optionen, produkte),
+    [optionIdx, optionen, produkte]
+  );
+
+  // Berechnungen — Jahr 1 mit lizenzJahr1, Folgejahre mit lizenzJahrFolge
+  const basis  = useMemo(() => berechne(investition, termine,        gehalt, raumkosten, mix, d1, d2, velogicLiz.jahr1   / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
+  const starr  = useMemo(() => berechne(investition, termine,        gehalt, raumkosten, mix, d1, d2, velogicLiz.jahr1   / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
+  const variJ2 = useMemo(() => berechne(investition, termine * 1.10, gehalt, raumkosten, mix, d1, d2, velogicLiz.jahrFolge / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
+  const variJ3 = useMemo(() => berechne(investition, termine * 1.20, gehalt, raumkosten, mix, d1, d2, velogicLiz.jahrFolge / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
 
   function anzeige(monatsWert: number) {
     if (calcMode === "monat") return `${fmt(monatsWert)} €`;
@@ -740,13 +762,20 @@ export default function MobileCalculator() {
               </div>
               <ul className="space-y-1.5">
                 {module.map(m => (
-                  <li key={m.id} className={`flex items-center gap-2 text-gray-700 ${isTablet ? "text-base" : "text-sm"}`}>
-                    <span className="w-1.5 h-1.5 rounded-full flex-none"
-                      style={{ background: "#AADD00" }}/>
-                    {m.name}
-                    <span className="ml-auto text-xs text-gray-400">
-                      {m.preis.toLocaleString("de-DE")} €
-                    </span>
+                  <li key={m.id} className={`text-gray-700 ${isTablet ? "text-base" : "text-sm"}`}>
+                    <div className="flex items-center gap-2">
+                      <span className="w-1.5 h-1.5 rounded-full flex-none"
+                        style={{ background: "#AADD00" }}/>
+                      {m.name}
+                      <span className="ml-auto text-xs text-gray-400">
+                        {m.preis.toLocaleString("de-DE")} €
+                      </span>
+                    </div>
+                    {(m.lizenzJahr1 ?? 0) > 0 && (
+                      <div className="ml-3.5 mt-0.5 text-xs font-medium" style={{ color: "#e07b00" }}>
+                        + Lizenz Jahr 1: {m.lizenzJahr1!.toLocaleString("de-DE")} € · ab Jahr 2: {m.lizenzJahrFolge!.toLocaleString("de-DE")} € / Jahr
+                      </div>
+                    )}
                   </li>
                 ))}
               </ul>
