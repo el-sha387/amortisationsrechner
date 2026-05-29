@@ -240,164 +240,157 @@ function PrintReport({ termine, mix, gehalt, raumkosten, investition, optionName
 }) {
   const navy = "#3D5278";
   const lime = "#AADD00";
-  const sH: React.CSSProperties = { fontSize: 11, fontWeight: 700,
-    textTransform: "uppercase", letterSpacing: 1, color: navy, marginBottom: 10, marginTop: 0 };
+  const fs   = 11;
+
+  const sH: React.CSSProperties = {
+    fontSize: 9, fontWeight: 700, textTransform: "uppercase",
+    letterSpacing: 1, color: navy, marginBottom: 6, marginTop: 0,
+  };
   const row = (label: string, value: string, bold = false, accent = false) => (
-    <div style={{ display: "flex", justifyContent: "space-between", padding: "5px 0",
-      borderBottom: "1px solid #f3f4f6" }}>
+    <div style={{ display: "flex", justifyContent: "space-between",
+      padding: "3px 0", borderBottom: "1px solid #f3f4f6", fontSize: fs }}>
       <span style={{ color: "#6b7280" }}>{label}</span>
       <span style={{ fontWeight: bold ? 700 : 400, color: accent ? navy : "#1f2937" }}>{value}</span>
     </div>
   );
+  const totalRow = (label: string, value: string) => (
+    <div style={{ display: "flex", justifyContent: "space-between",
+      marginTop: 5, paddingTop: 5, borderTop: `2px solid ${navy}`,
+      fontWeight: 700, color: navy, fontSize: fs }}>
+      <span>{label}</span><span>{value}</span>
+    </div>
+  );
 
-  const lizenzTotal3J = velogicLiz.jahr1 + velogicLiz.jahrFolge * 2;
-  const abschreibung  = investition / ANNAHMEN.abschreibungMonate;
-  const technik       = ANNAHMEN.lizenzMonat + ANNAHMEN.ersatzfolieGesamt / ANNAHMEN.abschreibungMonate;
-  const mitarbeiter   = gehalt * (1 + ANNAHMEN.lohnNebenkosten) *
+  const lizenzTotal3J  = velogicLiz.jahr1 + velogicLiz.jahrFolge * 2;
+  const abschreibung   = investition / ANNAHMEN.abschreibungMonate;
+  const technik        = ANNAHMEN.lizenzMonat + ANNAHMEN.ersatzfolieGesamt / ANNAHMEN.abschreibungMonate;
+  const mitarbeiter    = gehalt * (1 + ANNAHMEN.lohnNebenkosten) *
     ((termine * ANNAHMEN.arbeitszeitTermin) / ANNAHMEN.vollzeitStunden);
-  const raum          = raumkosten * ANNAHMEN.raumQm;
-  const isco          = ANNAHMEN.iscoJahr / 12;
-  const roiJahr3      = investition > 0
-    ? ((basis.ueberschuss + variJ2.ueberschuss + variJ3.ueberschuss) * 12 / investition) * 100 : 0;
+  const raum           = raumkosten * ANNAHMEN.raumQm;
+  const isco           = ANNAHMEN.iscoJahr / 12;
+  const velogicM1      = velogicLiz.jahr1 / 12;
+  const gewinnGesamt3J = (basis.ueberschuss + variJ2.ueberschuss + variJ3.ueberschuss) * 12;
+  const roiJahr3       = investition > 0 ? (gewinnGesamt3J / investition) * 100 : 0;
 
   return (
     <div id="print-report" className="print-only">
     <div style={{ fontFamily: "Arial, sans-serif", color: "#1f2937", background: "white",
-      padding: "36px 44px", maxWidth: 780, margin: "0 auto", fontSize: 13 }}>
+      padding: "20px 28px", fontSize: fs }}>
 
-      {/* Header */}
-      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start",
-        paddingBottom: 16, marginBottom: 20, borderBottom: `4px solid ${lime}` }}>
+      {/* ── Header ── */}
+      <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
+        paddingBottom: 10, marginBottom: kundenName ? 8 : 14, borderBottom: `3px solid ${lime}` }}>
         <div>
-          <div style={{ fontWeight: 900, fontSize: 22, color: navy, letterSpacing: 2,
-            textTransform: "uppercase" }}>gebioMized</div>
-          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2, letterSpacing: 1 }}>
+          <span style={{ fontWeight: 900, fontSize: 18, color: navy, letterSpacing: 2,
+            textTransform: "uppercase" }}>gebioMized</span>
+          <span style={{ fontSize: 10, color: "#9ca3af", marginLeft: 10 }}>
             Bikefitting-Technologie · SnM gebioMized GmbH
-          </div>
+          </span>
         </div>
         <div style={{ textAlign: "right" }}>
-          <div style={{ fontWeight: 700, fontSize: 15, color: navy }}>Rentabilitätsanalyse</div>
-          <div style={{ fontSize: 11, color: "#9ca3af", marginTop: 2 }}>
+          <div style={{ fontWeight: 700, fontSize: 13, color: navy }}>Rentabilitätsanalyse</div>
+          <div style={{ fontSize: 10, color: "#9ca3af" }}>
             {printedAt.toLocaleDateString("de-DE", { day: "2-digit", month: "long", year: "numeric" })}
           </div>
         </div>
       </div>
 
-      {/* Anrede */}
+      {/* ── Anrede ── */}
       {kundenName && (
-        <div style={{ marginBottom: 20 }}>
-          <div style={{ fontSize: 14, color: "#1f2937" }}>
-            Rentabilitätsanalyse für <strong style={{ color: navy }}>{kundenName}</strong>
-          </div>
-          <div style={{ fontSize: 12, color: "#9ca3af", marginTop: 3 }}>
-            Individuelle Berechnung auf Basis Ihrer Angaben
-          </div>
+        <div style={{ marginBottom: 12 }}>
+          <span style={{ fontSize: 12, color: "#1f2937" }}>Analyse für </span>
+          <strong style={{ fontSize: 13, color: navy }}>{kundenName}</strong>
+          <span style={{ fontSize: 10, color: "#9ca3af", marginLeft: 8 }}>
+            · Individuelle Berechnung auf Basis Ihrer Angaben
+          </span>
         </div>
       )}
 
-      {/* 2-Spalten: Investition + Kosten */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, marginBottom: 20 }}>
+      {/* ── 3 Spalten: Investition | Kosten | Einnahmen+Ergebnis ── */}
+      <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1fr", gap: 16, marginBottom: 12 }}>
+
+        {/* Spalte 1: Investition */}
         <div>
-          <h3 style={sH}>Investitionsübersicht — {optionName}</h3>
+          <h3 style={sH}>Investition — {optionName}</h3>
           {optionModule.map(m => (
-            <div key={m.id} style={{ padding: "4px 0", borderBottom: "1px solid #f3f4f6" }}>
-              <div style={{ display: "flex", justifyContent: "space-between" }}>
+            <div key={m.id} style={{ padding: "3px 0", borderBottom: "1px solid #f3f4f6" }}>
+              <div style={{ display: "flex", justifyContent: "space-between", fontSize: fs }}>
                 <span style={{ color: "#374151" }}>{m.name}</span>
                 <span style={{ fontWeight: 600 }}>{m.preis.toLocaleString("de-DE")} €</span>
               </div>
               {(m.lizenzJahr1 ?? 0) > 0 && (
-                <div style={{ fontSize: 11, color: "#d97706", marginTop: 1 }}>
-                  Lizenz: {m.lizenzJahr1!.toLocaleString("de-DE")} € / Jahr 1
-                  &nbsp;·&nbsp; ab Jahr 2: {m.lizenzJahrFolge!.toLocaleString("de-DE")} € / Jahr
+                <div style={{ fontSize: 9, color: "#d97706" }}>
+                  Lizenz {m.lizenzJahr1!.toLocaleString("de-DE")} € J1
+                  · ab J2 {m.lizenzJahrFolge!.toLocaleString("de-DE")} €
                 </div>
               )}
             </div>
           ))}
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8,
-            paddingTop: 8, borderTop: `2px solid ${navy}`, fontWeight: 700, color: navy }}>
-            <span>Hardware gesamt</span>
-            <span>{investition.toLocaleString("de-DE")} €</span>
-          </div>
+          {totalRow("Hardware", `${investition.toLocaleString("de-DE")} €`)}
           {lizenzTotal3J > 0 && (
-            <div style={{ fontSize: 11, color: "#d97706", marginTop: 4 }}>
-              Lizenzkosten 3 Jahre gesamt: ca. {lizenzTotal3J.toLocaleString("de-DE")} €
+            <div style={{ fontSize: 9, color: "#d97706", marginTop: 3 }}>
+              Lizenzen 3 Jahre: ~{lizenzTotal3J.toLocaleString("de-DE")} €
             </div>
           )}
         </div>
+
+        {/* Spalte 2: Kosten */}
         <div>
-          <h3 style={sH}>Monatliche Kosten (Jahr 1)</h3>
-          {row("Abschreibung Hardware", `${fmt(abschreibung, 0)} €`)}
-          {row("Technik & Lizenz (gebioM)", `${fmt(technik, 0)} €`)}
-          {velogicLiz.jahr1 > 0 && row("Velogic-Lizenz (Jahr 1)", `${fmt(velogicLiz.jahr1 / 12, 0)} €`)}
-          {row("Mitarbeiter (anteilig)", `${fmt(mitarbeiter, 0)} €`)}
+          <h3 style={sH}>Monatl. Kosten (Jahr 1)</h3>
+          {row("Abschreibung", `${fmt(abschreibung, 0)} €`)}
+          {row("Technik & Lizenz", `${fmt(technik, 0)} €`)}
+          {velogicM1 > 0 && row("Velogic-Lizenz", `${fmt(velogicM1, 0)} €`)}
+          {row("Mitarbeiter", `${fmt(mitarbeiter, 0)} €`)}
           {row("Raum", `${fmt(raum, 0)} €`)}
-          {row("ISCO / Weiterbildung", `${fmt(isco, 0)} €`)}
-          <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8,
-            paddingTop: 8, borderTop: `2px solid ${navy}`, fontWeight: 700, color: navy }}>
-            <span>Kosten gesamt</span>
-            <span>{fmt(basis.ausgaben, 0)} €</span>
-          </div>
+          {row("ISCO", `${fmt(isco, 0)} €`)}
+          {totalRow("Kosten gesamt", `${fmt(basis.ausgaben, 0)} €`)}
         </div>
-      </div>
 
-      <div style={{ borderTop: "1px solid #e5e7eb", margin: "18px 0" }}/>
-
-      {/* 2-Spalten: Einnahmen + Ergebnis */}
-      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 28, marginBottom: 20 }}>
+        {/* Spalte 3: Einnahmen & Ergebnis */}
         <div>
-          <h3 style={sH}>Monatliche Einnahmen</h3>
+          <h3 style={sH}>Einnahmen & Ergebnis</h3>
           {row(`${d1.name} (${Math.round((1-mix)*100)} %)`,
-            `${fmt(basis.umsatzTermin, 2)} € / Termin (Ø)`)}
+            `${fmt(basis.umsatzTermin, 2)} € / T.`)}
           {row("Termine / Monat", `${termine}`)}
-          {row("Einnahmen gesamt", `${fmt(basis.einnahmen, 0)} €`, true, true)}
-        </div>
-        <div>
-          <h3 style={sH}>Monatliches Ergebnis</h3>
-          {row("Einnahmen", `${fmt(basis.einnahmen, 0)} €`)}
-          {row("Kosten", `– ${fmt(basis.ausgaben, 0)} €`)}
+          {row("Einnahmen / Monat", `${fmt(basis.einnahmen, 0)} €`, true)}
+          <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 3 }}/>
           {row("Überschuss / Monat", `${fmt(basis.ueberschuss, 0)} €`, true, basis.ueberschuss > 0)}
-          {row("Jahresgewinn (Jahr 1)", `${fmt(basis.ueberschuss * 12, 0)} €`, true)}
-          {row("Break-Even", basis.breakEvenMonate < Infinity
-            ? `${fmt(basis.breakEvenMonate, 1)} Monate` : "Termine erhöhen")}
+          {row("Amortisation", basis.breakEvenMonate < Infinity
+            ? `${fmt(basis.breakEvenMonate, 1)} Monate` : "–")}
+          {row("Kostendeckung ab", basis.breakEvenTermine < Infinity
+            ? `${fmt(basis.breakEvenTermine, 0)} Terminen/Mo.` : "–")}
         </div>
       </div>
 
-      {/* Highlight-Banner */}
-      <div style={{ background: navy, borderRadius: 10, padding: "14px 20px",
-        display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 20 }}>
-        <div>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginBottom: 3 }}>Jahresgewinn Jahr 1</div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: lime, lineHeight: 1 }}>
-            {fmt(basis.ueberschuss * 12)} €
-          </div>
-        </div>
-        <div style={{ width: 1, height: 40, background: "rgba(255,255,255,0.15)" }}/>
-        <div style={{ textAlign: "center" }}>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginBottom: 3 }}>Break-Even</div>
-          <div style={{ fontSize: 20, fontWeight: 900, color: "white" }}>
-            {basis.breakEvenMonate < Infinity ? `${fmt(basis.breakEvenMonate, 1)} Mo.` : "–"}
-          </div>
-        </div>
-        <div style={{ width: 1, height: 40, background: "rgba(255,255,255,0.15)" }}/>
-        <div style={{ textAlign: "right" }}>
-          <div style={{ fontSize: 11, color: "rgba(255,255,255,0.6)", marginBottom: 3 }}>ROI über 3 Jahre</div>
-          <div style={{ fontSize: 26, fontWeight: 900, color: "white", lineHeight: 1 }}>
-            {fmt(roiJahr3, 0)} %
-          </div>
-          <div style={{ fontSize: 11, color: lime }}>
-            Gewinn 3 J.: {fmt((basis.ueberschuss + variJ2.ueberschuss + variJ3.ueberschuss) * 12)} €
-          </div>
-        </div>
+      {/* ── Highlight-Banner ── */}
+      <div style={{ background: navy, borderRadius: 8, padding: "10px 18px",
+        display: "grid", gridTemplateColumns: "1fr auto 1fr auto 1fr auto 1fr",
+        alignItems: "center", gap: 8, marginBottom: 12 }}>
+        {[
+          { label: "Jahresgewinn J1",    value: `${fmt(basis.ueberschuss * 12)} €`,  color: lime,    big: true  },
+          { label: "ROI 3 Jahre",        value: `${fmt(roiJahr3, 0)} %`,              color: "white", big: true  },
+          { label: "Gewinn 3 J. gesamt", value: `${fmt(gewinnGesamt3J)} €`,           color: "white", big: false },
+          { label: "Amortisation",       value: basis.breakEvenMonate < Infinity
+              ? `${fmt(basis.breakEvenMonate, 1)} Mo.` : "–",                         color: lime,    big: false },
+        ].flatMap((item, i) => [
+          i > 0 ? <div key={`d${i}`} style={{ width: 1, height: 36, background: "rgba(255,255,255,0.15)", justifySelf: "center" }}/> : null,
+          <div key={i} style={{ textAlign: i === 1 ? "center" : i >= 2 ? "right" : "left" }}>
+            <div style={{ fontSize: 9, color: "rgba(255,255,255,0.6)", marginBottom: 2 }}>{item.label}</div>
+            <div style={{ fontSize: item.big ? 20 : 15, fontWeight: 900, color: item.color, lineHeight: 1 }}>
+              {item.value}
+            </div>
+          </div>,
+        ])}
       </div>
 
-      {/* 3-Jahres-Prognose */}
-      <h3 style={sH}>3-Jahres-Prognose (+10 % Terminwachstum p.a.)</h3>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 20, fontSize: 12 }}>
+      {/* ── 3-Jahres-Prognose ── */}
+      <h3 style={{ ...sH, marginBottom: 6 }}>3-Jahres-Prognose (+10 % Terminwachstum p.a.)</h3>
+      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12, fontSize: fs }}>
         <thead>
           <tr style={{ background: "#f4f6f9" }}>
-            {["Jahr", "Termine / Mo.", "Einnahmen p.a.", "Kosten p.a.", "Gewinn p.a."].map(h => (
+            {["Jahr", "Termine/Mo.", "Einnahmen p.a.", "Kosten p.a.", "Gewinn p.a."].map(h => (
               <th key={h} style={{ textAlign: h === "Jahr" ? "left" : "right",
-                padding: "8px 10px", color: navy, fontWeight: 700 }}>{h}</th>
+                padding: "5px 8px", color: navy, fontWeight: 700, fontSize: 10 }}>{h}</th>
             ))}
           </tr>
         </thead>
@@ -409,38 +402,36 @@ function PrintReport({ termine, mix, gehalt, raumkosten, investition, optionName
           ].map(({ j, t, label }, i) => (
             <tr key={i} style={{ borderBottom: "1px solid #f0f0f0",
               background: i % 2 === 0 ? "white" : "#fafafa" }}>
-              <td style={{ padding: "7px 10px", fontWeight: 600 }}>{label}</td>
-              <td style={{ textAlign: "right", padding: "7px 10px" }}>{t}</td>
-              <td style={{ textAlign: "right", padding: "7px 10px" }}>{fmt(j.einnahmen * 12)} €</td>
-              <td style={{ textAlign: "right", padding: "7px 10px" }}>{fmt(j.ausgaben * 12)} €</td>
-              <td style={{ textAlign: "right", padding: "7px 10px", fontWeight: 700,
-                color: j.ueberschuss >= 0 ? navy : "#ef4444" }}>
-                {fmt(j.ueberschuss * 12)} €
-              </td>
+              <td style={{ padding: "5px 8px", fontWeight: 600 }}>{label}</td>
+              <td style={{ textAlign: "right", padding: "5px 8px" }}>{t}</td>
+              <td style={{ textAlign: "right", padding: "5px 8px" }}>{fmt(j.einnahmen * 12)} €</td>
+              <td style={{ textAlign: "right", padding: "5px 8px" }}>{fmt(j.ausgaben * 12)} €</td>
+              <td style={{ textAlign: "right", padding: "5px 8px", fontWeight: 700,
+                color: j.ueberschuss >= 0 ? navy : "#ef4444" }}>{fmt(j.ueberschuss * 12)} €</td>
             </tr>
           ))}
           <tr style={{ background: navy }}>
-            <td colSpan={4} style={{ padding: "8px 10px", color: "white", fontWeight: 700 }}>
+            <td colSpan={4} style={{ padding: "5px 8px", color: "white", fontWeight: 700, fontSize: 10 }}>
               Gesamt 3 Jahre
             </td>
-            <td style={{ textAlign: "right", padding: "8px 10px",
-              fontWeight: 900, color: lime, fontSize: 14 }}>
-              {fmt((basis.ueberschuss + variJ2.ueberschuss + variJ3.ueberschuss) * 12)} €
+            <td style={{ textAlign: "right", padding: "5px 8px",
+              fontWeight: 900, color: lime, fontSize: 13 }}>
+              {fmt(gewinnGesamt3J)} €
             </td>
           </tr>
         </tbody>
       </table>
 
-      {/* Footer */}
-      <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 12,
-        display: "flex", justifyContent: "space-between", alignItems: "flex-end" }}>
-        <div style={{ fontSize: 10, color: "#9ca3af", lineHeight: 1.6 }}>
-          Alle Beträge netto (ohne MwSt.) · Abschreibung linear über 36 Monate
+      {/* ── Footer ── */}
+      <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 8,
+        display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+        <div style={{ fontSize: 9, color: "#9ca3af", lineHeight: 1.5 }}>
+          Alle Beträge netto · Abschreibung linear {ANNAHMEN.abschreibungMonate} Monate
           · Sattel-Marge abzgl. 19 % MwSt. · Unverbindliche Modellrechnung
         </div>
-        <div style={{ fontSize: 10, color: "#9ca3af", textAlign: "right" }}>
-          <div style={{ fontWeight: 700, color: navy }}>gebioMized</div>
-          <div>www.gebioMized.com</div>
+        <div style={{ fontSize: 9, color: "#9ca3af", textAlign: "right" }}>
+          <span style={{ fontWeight: 700, color: navy }}>gebioMized</span>
+          {" · "}www.gebioMized.com
         </div>
       </div>
 
@@ -507,9 +498,14 @@ export default function MobileCalculator() {
     if (!isNaN(parsed) && parsed >= 500) setInvestition(parsed);
   }
 
-  function handlePrint() {
+  async function handlePrint() {
     setPrintedAt(new Date());
-    setTimeout(() => window.print(), 50);
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    if (isIOS && navigator.share) {
+      await navigator.share({ title: "Rentabilitätsanalyse gebioMized", url: window.location.href });
+    } else {
+      setTimeout(() => window.print(), 50);
+    }
   }
 
   // Velogic-Lizenzen (Jahr 1 vs. Folgejahre)
