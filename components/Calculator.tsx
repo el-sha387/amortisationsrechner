@@ -45,8 +45,8 @@ const DEFAULT_EINSTELLUNGEN: Einstellungen = {
   ],
   d1: {
     name: "Sattel-Analyse",
-    uvpLabel: "89 € UVP",
-    dlNetto: 74.79,
+    uvpLabel: "99 € UVP",
+    dlNetto: 83.20,
     sattelAnteil: 100,
     sattelPreis: 88.60,
   },

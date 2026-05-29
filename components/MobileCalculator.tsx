@@ -164,7 +164,7 @@ export default function MobileCalculator() {
             </span>
           </div>
           <div className="flex justify-between text-xs text-gray-500 mb-1">
-            <span>Sattel-Analyse<br/><span className="text-gray-400">89 € UVP</span></span>
+            <span>Sattel-Analyse<br/><span className="text-gray-400">99 € UVP</span></span>
             <span className="text-right">Bikefitting Basis<br/><span className="text-gray-400">149 € UVP</span></span>
           </div>
           <input type="range" min={0} max={1} step={0.1} value={mix}

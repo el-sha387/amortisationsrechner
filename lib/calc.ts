@@ -9,7 +9,7 @@ export const DEFAULTS = {
   arbeitszeitTermin: 1.25,
   vollzeitStunden: 172,
   lohnNebenkosten: 0.20,
-  d1DlNetto: 74.79,
+  d1DlNetto: 83.20,
   d1SattelPreis: 88.60,
   d1SattelAnteil: 1.0,
   d2DlNetto: 125.21,
