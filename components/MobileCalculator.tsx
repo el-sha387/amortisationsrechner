@@ -81,27 +81,35 @@ function getVelogicLizenzen(optionIdx: number | null, optionen: Option[], produk
   );
 }
 
+function sattelMarge(uvp: number, ek: number) {
+  // UVP = Brutto-Endkundenpreis (inkl. 19% MwSt.)
+  // EK  = Netto-Einkaufspreis (ohne MwSt., B2B)
+  return uvp / 1.19 - ek;
+}
+
 function berechne(
   investition: number, termine: number, gehalt: number,
   raumkosten: number, mix: number, d1: DL, d2: DL,
   velogicLizenzMonat = 0
 ) {
-  const d1Umsatz = d1.dlNetto + (d1.sattelAnteil / 100) * ((d1.sattelUvp - d1.sattelEK) / 1.19);
-  const d2Umsatz = d2.dlNetto + (d2.sattelAnteil / 100) * ((d2.sattelUvp - d2.sattelEK) / 1.19);
-  const abschreibung   = investition / ANNAHMEN.abschreibungMonate;
-  const technikLaufend = ANNAHMEN.lizenzMonat + ANNAHMEN.ersatzfolieGesamt / ANNAHMEN.abschreibungMonate + velogicLizenzMonat;
-  const mitarbeiter    = gehalt * (1 + ANNAHMEN.lohnNebenkosten) *
-                         ((termine * ANNAHMEN.arbeitszeitTermin) / ANNAHMEN.vollzeitStunden);
+  const d1Umsatz = d1.dlNetto + (d1.sattelAnteil / 100) * sattelMarge(d1.sattelUvp, d1.sattelEK);
+  const d2Umsatz = d2.dlNetto + (d2.sattelAnteil / 100) * sattelMarge(d2.sattelUvp, d2.sattelEK);
+  const abschreibung       = investition / ANNAHMEN.abschreibungMonate;
+  const technikLaufend     = ANNAHMEN.lizenzMonat + ANNAHMEN.ersatzfolieGesamt / ANNAHMEN.abschreibungMonate + velogicLizenzMonat;
+  const variableKostenSatz = gehalt * (1 + ANNAHMEN.lohnNebenkosten) * ANNAHMEN.arbeitszeitTermin / ANNAHMEN.vollzeitStunden;
+  const mitarbeiter        = variableKostenSatz * termine;
   const raum    = raumkosten * ANNAHMEN.raumQm;
   const isco    = ANNAHMEN.iscoJahr / 12;
-  const ausgaben = abschreibung + technikLaufend + mitarbeiter + raum + isco;
+  const fixeKosten = abschreibung + technikLaufend + raum + isco;
+  const ausgaben   = fixeKosten + mitarbeiter;
   const umsatzTermin = (1 - mix) * d1Umsatz + mix * d2Umsatz;
   const einnahmen    = termine * umsatzTermin;
   const ueberschuss  = einnahmen - ausgaben;
   const cashGewinn   = ueberschuss + abschreibung;
   const breakEvenMonate  = cashGewinn > 0 ? investition / cashGewinn : Infinity;
-  const breakEvenTermine = ueberschuss > 0
-    ? ausgaben / (umsatzTermin - ausgaben / termine) : Infinity;
+  // Break-Even Termine: nur fixe Kosten / (Umsatz je Termin − variable Kosten je Termin)
+  const breakEvenTermine = umsatzTermin > variableKostenSatz
+    ? fixeKosten / (umsatzTermin - variableKostenSatz) : Infinity;
   return { ausgaben, einnahmen, ueberschuss, cashGewinn,
            umsatzTermin, breakEvenMonate, breakEvenTermine, abschreibung };
 }
@@ -575,15 +583,15 @@ export default function MobileCalculator() {
                   {d1.name}
                 </span>
                 <span className="text-xs text-gray-400 ml-auto">
-                  Ø {fmt(d1.dlNetto + (d1.sattelAnteil / 100) * ((d1.sattelUvp - d1.sattelEK) / 1.19), 2)} € / Termin
+                  Ø {fmt(d1.dlNetto + (d1.sattelAnteil / 100) * sattelMarge(d1.sattelUvp, d1.sattelEK), 2)} € / Termin
                 </span>
               </div>
               <div className="rounded-2xl border border-gray-100 px-4 py-1 divide-y divide-gray-50">
                 <SettingsInput label="DL-Preis netto" value={d1.dlNetto} onChange={v => setD1(p => ({ ...p, dlNetto: v }))} suffix="€" step={0.5}/>
                 <SettingsInput label="Sattelanteil" value={d1.sattelAnteil} onChange={v => setD1(p => ({ ...p, sattelAnteil: Math.min(100, v) }))} suffix="%" step={5}/>
-                <SettingsInput label="UVP Sattel netto" value={d1.sattelUvp} onChange={v => setD1(p => ({ ...p, sattelUvp: v }))} suffix="€" step={1}/>
-                <SettingsInputHint label="Händler EK netto" value={d1.sattelEK} onChange={v => setD1(p => ({ ...p, sattelEK: v }))} suffix="€" step={1}
-                  hint={`Marge netto (abzgl. MwSt): ${fmt((d1.sattelUvp - d1.sattelEK) / 1.19, 2)} €`}/>
+                <SettingsInput label="UVP Sattel (brutto)" value={d1.sattelUvp} onChange={v => setD1(p => ({ ...p, sattelUvp: v }))} suffix="€" step={1}/>
+                <SettingsInputHint label="Händler EK (netto, B2B)" value={d1.sattelEK} onChange={v => setD1(p => ({ ...p, sattelEK: v }))} suffix="€" step={1}
+                  hint={`Netto-Marge: ${fmt(sattelMarge(d1.sattelUvp, d1.sattelEK), 2)} € (UVP ${fmt(d1.sattelUvp / 1.19, 2)} € netto − EK ${fmt(d1.sattelEK, 2)} €)`}/>
               </div>
             </div>
 
@@ -595,15 +603,15 @@ export default function MobileCalculator() {
                   {d2.name}
                 </span>
                 <span className="text-xs text-gray-400 ml-auto">
-                  Ø {fmt(d2.dlNetto + (d2.sattelAnteil / 100) * ((d2.sattelUvp - d2.sattelEK) / 1.19), 2)} € / Termin
+                  Ø {fmt(d2.dlNetto + (d2.sattelAnteil / 100) * sattelMarge(d2.sattelUvp, d2.sattelEK), 2)} € / Termin
                 </span>
               </div>
               <div className="rounded-2xl border border-gray-100 px-4 py-1 divide-y divide-gray-50">
                 <SettingsInput label="DL-Preis netto" value={d2.dlNetto} onChange={v => setD2(p => ({ ...p, dlNetto: v }))} suffix="€" step={0.5}/>
                 <SettingsInput label="Sattelanteil" value={d2.sattelAnteil} onChange={v => setD2(p => ({ ...p, sattelAnteil: Math.min(100, v) }))} suffix="%" step={5}/>
-                <SettingsInput label="UVP Sattel netto" value={d2.sattelUvp} onChange={v => setD2(p => ({ ...p, sattelUvp: v }))} suffix="€" step={1}/>
-                <SettingsInputHint label="Händler EK netto" value={d2.sattelEK} onChange={v => setD2(p => ({ ...p, sattelEK: v }))} suffix="€" step={1}
-                  hint={`Marge netto (abzgl. MwSt): ${fmt((d2.sattelUvp - d2.sattelEK) / 1.19, 2)} €`}/>
+                <SettingsInput label="UVP Sattel (brutto)" value={d2.sattelUvp} onChange={v => setD2(p => ({ ...p, sattelUvp: v }))} suffix="€" step={1}/>
+                <SettingsInputHint label="Händler EK (netto, B2B)" value={d2.sattelEK} onChange={v => setD2(p => ({ ...p, sattelEK: v }))} suffix="€" step={1}
+                  hint={`Netto-Marge: ${fmt(sattelMarge(d2.sattelUvp, d2.sattelEK), 2)} € (UVP ${fmt(d2.sattelUvp / 1.19, 2)} € netto − EK ${fmt(d2.sattelEK, 2)} €)`}/>
               </div>
             </div>
 

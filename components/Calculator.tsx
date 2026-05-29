@@ -98,26 +98,37 @@ function getVelogicLizenzen(optionIdx: number | null, optionen: Option[], produk
   );
 }
 
+function sattelMarge(uvp: number, ek: number) {
+  // UVP = Brutto-Endkundenpreis (inkl. 19% MwSt.)
+  // EK  = Netto-Einkaufspreis (ohne MwSt., B2B)
+  // Netto-Marge = UVP_netto − EK_netto
+  return uvp / 1.19 - ek;
+}
+
 function berechneMonat(
   investition: number, termine: number, gehalt: number,
   raumkosten: number, mixAnteil: number, a: Annahmen, e: Einstellungen,
   velogicLizenzMonat = 0
 ) {
-  const d1Umsatz = e.d1.dlNetto + (e.d1.sattelAnteil / 100) * ((e.d1.sattelUvp - e.d1.sattelEK) / 1.19);
-  const d2Umsatz = e.d2.dlNetto + (e.d2.sattelAnteil / 100) * ((e.d2.sattelUvp - e.d2.sattelEK) / 1.19);
-  const abschreibungMonat = investition / a.abschreibungMonate;
-  const technikLaufend    = a.lizenzMonat + a.ersatzfolieGesamt / a.abschreibungMonate + velogicLizenzMonat;
-  const mitarbeiter       = gehalt * (1 + a.lohnNebenkosten / 100) *
-                            ((termine * a.arbeitszeitTermin) / a.vollzeitStunden);
+  const d1Umsatz = e.d1.dlNetto + (e.d1.sattelAnteil / 100) * sattelMarge(e.d1.sattelUvp, e.d1.sattelEK);
+  const d2Umsatz = e.d2.dlNetto + (e.d2.sattelAnteil / 100) * sattelMarge(e.d2.sattelUvp, e.d2.sattelEK);
+  const abschreibungMonat  = investition / a.abschreibungMonate;
+  const technikLaufend     = a.lizenzMonat + a.ersatzfolieGesamt / a.abschreibungMonate + velogicLizenzMonat;
+  const variableKostenSatz = gehalt * (1 + a.lohnNebenkosten / 100) * a.arbeitszeitTermin / a.vollzeitStunden;
+  const mitarbeiter        = variableKostenSatz * termine;
   const raum    = raumkosten * a.raumQm;
   const isco    = a.iscoJahr / 12;
-  const ausgaben = abschreibungMonat + technikLaufend + mitarbeiter + raum + isco;
+  const fixeKosten = abschreibungMonat + technikLaufend + raum + isco;
+  const ausgaben   = fixeKosten + mitarbeiter;
   const umsatzTermin = (1 - mixAnteil) * d1Umsatz + mixAnteil * d2Umsatz;
   const einnahmen    = termine * umsatzTermin;
   const ueberschuss  = einnahmen - ausgaben;
   const cashGewinn   = ueberschuss + abschreibungMonat;
+  // Break-Even Termine: fixe Kosten / (Umsatz je Termin − variable Kosten je Termin)
+  const breakEvenTermine = umsatzTermin > variableKostenSatz
+    ? fixeKosten / (umsatzTermin - variableKostenSatz) : Infinity;
   return { ausgaben, einnahmen, ueberschuss, cashGewinn, umsatzTermin,
-           d1Umsatz, d2Umsatz, abschreibungMonat };
+           d1Umsatz, d2Umsatz, abschreibungMonat, breakEvenTermine, fixeKosten };
 }
 
 function berechne(
@@ -131,8 +142,7 @@ function berechne(
   const j2 = berechneMonat(investition, termine * (1 + wachstum / 100),      gehalt, raumkosten, mixAnteil, a, e, lizF);
   const j3 = berechneMonat(investition, termine * (1 + wachstum / 100) ** 2, gehalt, raumkosten, mixAnteil, a, e, lizF);
   const breakEvenMonate  = j1.cashGewinn > 0 ? investition / j1.cashGewinn : Infinity;
-  const breakEvenTermine = j1.ueberschuss > 0
-    ? j1.ausgaben / (j1.umsatzTermin - j1.ausgaben / termine) : Infinity;
+  const breakEvenTermine = j1.breakEvenTermine;
   const jahre = [
     { termine: Math.round(termine),                             gewinn: j1.ueberschuss * 12, einnahmen: j1.einnahmen * 12, ausgaben: j1.ausgaben * 12 },
     { termine: Math.round(termine * (1 + wachstum / 100)),      gewinn: j2.ueberschuss * 12, einnahmen: j2.einnahmen * 12, ausgaben: j2.ausgaben * 12 },
@@ -1009,7 +1019,7 @@ export default function Calculator() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             {(["d1", "d2"] as const).map(dl => {
               const d = einstellungen[dl];
-              const umsatz = d.dlNetto + (d.sattelAnteil / 100) * ((d.sattelUvp - d.sattelEK) / 1.19);
+              const umsatz = d.dlNetto + (d.sattelAnteil / 100) * (d.sattelUvp / 1.19 - d.sattelEK);
               return (
                 <div key={dl} className="bg-white rounded-2xl p-5 shadow-sm">
                   <h2 className="font-bold text-sm uppercase tracking-wide mb-1"
@@ -1037,11 +1047,11 @@ export default function Calculator() {
                         <NumInput label="Anteil Termine mit Sattelverkauf" value={d.sattelAnteil}
                           onChange={v => setD(dl, { sattelAnteil: Math.min(100, Math.max(0, v)) })}
                           suffix="%" step={5} min={0}/>
-                        <NumInput label="UVP Sattel (netto)" value={d.sattelUvp}
+                        <NumInput label="UVP Sattel (brutto, inkl. MwSt.)" value={d.sattelUvp}
                           onChange={v => setD(dl, { sattelUvp: v })} suffix="€" step={1} min={0}/>
-                        <NumInput label="Händler EK (netto)" value={d.sattelEK}
+                        <NumInput label="Händler EK (netto, B2B)" value={d.sattelEK}
                           onChange={v => setD(dl, { sattelEK: v })} suffix="€" step={1} min={0}
-                          hint={`Marge netto (abzgl. MwSt): ${fmt((d.sattelUvp - d.sattelEK) / 1.19, 2)} €`}/>
+                          hint={`Netto-Marge: ${fmt(d.sattelUvp / 1.19 - d.sattelEK, 2)} € (UVP ${fmt(d.sattelUvp / 1.19, 2)} € netto − EK ${fmt(d.sattelEK, 2)} €)`}/>
                       </div>
                     </div>
                   </div>
