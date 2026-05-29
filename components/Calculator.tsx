@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import AmortizationChart from "./AmortizationChart";
 
 // ─── Typen ────────────────────────────────────────────────────────────────────
 
@@ -73,7 +72,8 @@ const DEFAULT_ANNAHMEN: Annahmen = {
 
 // ─── Berechnung ───────────────────────────────────────────────────────────────
 
-function berechne(
+// Berechnet Monatswerte für eine gegebene Terminanzahl
+function berechneMonat(
   investition: number,
   termine: number,
   gehalt: number,
@@ -86,33 +86,63 @@ function berechne(
   const d2Umsatz = e.d2.dlNetto + (e.d2.sattelAnteil / 100) * e.d2.sattelPreis;
 
   const abschreibungMonat = investition / a.abschreibungMonate;
-  const technikLaufend = a.lizenzMonat + a.ersatzfolieGesamt / a.abschreibungMonate;
-  const mitarbeiter =
-    gehalt * (1 + a.lohnNebenkosten / 100) *
-    ((termine * a.arbeitszeitTermin) / a.vollzeitStunden);
-  const raum   = raumkosten * a.raumQm;
-  const isco   = a.iscoJahr / 12;
+  const technikLaufend    = a.lizenzMonat + a.ersatzfolieGesamt / a.abschreibungMonate;
+  const mitarbeiter       = gehalt * (1 + a.lohnNebenkosten / 100) *
+                            ((termine * a.arbeitszeitTermin) / a.vollzeitStunden);
+  const raum    = raumkosten * a.raumQm;
+  const isco    = a.iscoJahr / 12;
   const ausgaben = abschreibungMonat + technikLaufend + mitarbeiter + raum + isco;
 
   const umsatzTermin = mixAnteil * d1Umsatz + (1 - mixAnteil) * d2Umsatz;
   const einnahmen    = termine * umsatzTermin;
   const ueberschuss  = einnahmen - ausgaben;
+  const cashGewinn   = ueberschuss + abschreibungMonat;
 
-  // Cash-Gewinn (vor Abschreibung) für Amortisationskurve
-  const cashGewinn = ueberschuss + abschreibungMonat;
+  return { ausgaben, einnahmen, ueberschuss, cashGewinn, umsatzTermin, d1Umsatz, d2Umsatz, abschreibungMonat };
+}
 
-  const breakEvenMonate  = cashGewinn > 0 ? investition / cashGewinn : Infinity;
-  const breakEvenTermine = ueberschuss > 0
-    ? ausgaben / (umsatzTermin - ausgaben / termine)
+function berechne(
+  investition: number,
+  termine: number,
+  gehalt: number,
+  raumkosten: number,
+  mixAnteil: number,
+  wachstum: number,   // Terminwachstum Jahr 2/3 in %
+  a: Annahmen,
+  e: Einstellungen
+) {
+  const j1 = berechneMonat(investition, termine,                              gehalt, raumkosten, mixAnteil, a, e);
+  const j2 = berechneMonat(investition, termine * (1 + wachstum / 100),       gehalt, raumkosten, mixAnteil, a, e);
+  const j3 = berechneMonat(investition, termine * (1 + wachstum / 100) ** 2,  gehalt, raumkosten, mixAnteil, a, e);
+
+  const breakEvenMonate  = j1.cashGewinn > 0 ? investition / j1.cashGewinn : Infinity;
+  const breakEvenTermine = j1.ueberschuss > 0
+    ? j1.ausgaben / (j1.umsatzTermin - j1.ausgaben / termine)
     : Infinity;
 
-  const gewinnJahr1 = ueberschuss * 12;
-  const gewinnJahr3 = ueberschuss * 36;
-  const roiJahr3    = investition > 0 ? (gewinnJahr3 / investition) * 100 : 0;
+  const jahre = [
+    { termine: Math.round(termine),                              gewinn: j1.ueberschuss * 12, einnahmen: j1.einnahmen * 12, ausgaben: j1.ausgaben * 12 },
+    { termine: Math.round(termine * (1 + wachstum / 100)),       gewinn: j2.ueberschuss * 12, einnahmen: j2.einnahmen * 12, ausgaben: j2.ausgaben * 12 },
+    { termine: Math.round(termine * (1 + wachstum / 100) ** 2),  gewinn: j3.ueberschuss * 12, einnahmen: j3.einnahmen * 12, ausgaben: j3.ausgaben * 12 },
+  ];
 
-  return { ausgaben, einnahmen, ueberschuss, cashGewinn, breakEvenMonate,
-           breakEvenTermine, gewinnJahr1, gewinnJahr3, roiJahr3, umsatzTermin,
-           d1Umsatz, d2Umsatz };
+  const gewinnGesamt3J = jahre.reduce((s, j) => s + j.gewinn, 0);
+  const roiJahr3       = investition > 0 ? (gewinnGesamt3J / investition) * 100 : 0;
+
+  return {
+    ausgaben: j1.ausgaben,
+    einnahmen: j1.einnahmen,
+    ueberschuss: j1.ueberschuss,
+    cashGewinn: j1.cashGewinn,
+    umsatzTermin: j1.umsatzTermin,
+    d1Umsatz: j1.d1Umsatz,
+    d2Umsatz: j1.d2Umsatz,
+    breakEvenMonate,
+    breakEvenTermine,
+    jahre,
+    gewinnGesamt3J,
+    roiJahr3,
+  };
 }
 
 // ─── Hilfsfunktionen ─────────────────────────────────────────────────────────
@@ -208,6 +238,7 @@ export default function Calculator() {
   const [gehalt, setGehalt]                   = useState(2600);
   const [raumkosten, setRaumkosten]           = useState(14);
   const [mix, setMix]                         = useState(0.8);
+  const [wachstum, setWachstum]               = useState(10); // % Terminwachstum p.a.
 
   // Konfiguration
   const [einstellungen, setEinstellungen] = useState<Einstellungen>(DEFAULT_EINSTELLUNGEN);
@@ -229,8 +260,8 @@ export default function Calculator() {
   }
 
   const ergebnis = useMemo(
-    () => berechne(investition, termine, gehalt, raumkosten, mix, annahmen, einstellungen),
-    [investition, termine, gehalt, raumkosten, mix, annahmen, einstellungen]
+    () => berechne(investition, termine, gehalt, raumkosten, mix, wachstum, annahmen, einstellungen),
+    [investition, termine, gehalt, raumkosten, mix, wachstum, annahmen, einstellungen]
   );
 
   function handleStufeKlick(idx: number) {
@@ -380,10 +411,23 @@ export default function Calculator() {
               <input type="range" min={0} max={1} step={0.1} value={mix} onChange={e => setMix(Number(e.target.value))} />
               <div className="flex justify-between mt-1">
                 <span className="text-sm font-semibold" style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>{Math.round(mix * 100)} %</span>
-                <span className="text-xs text-gray-400 self-center">
-                  Ø {fmt(ergebnis.umsatzTermin, 2)} € / Termin
-                </span>
+                <span className="text-xs text-gray-400 self-center">Ø {fmt(ergebnis.umsatzTermin, 2)} € / Termin</span>
                 <span className="text-sm font-semibold" style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>{Math.round((1 - mix) * 100)} %</span>
+              </div>
+            </div>
+
+            {/* Wachstumsrate */}
+            <div className="bg-white rounded-2xl p-5 shadow-sm">
+              <h2 className="font-bold text-sm uppercase tracking-wide mb-1" style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
+                Terminwachstum Jahr 2 / 3
+              </h2>
+              <p className="text-xs text-gray-400 mb-3">Erwartete Steigerung der Terminanzahl pro Jahr</p>
+              <div className="flex items-center gap-3">
+                <input type="range" min={0} max={50} step={5} value={wachstum} onChange={e => setWachstum(Number(e.target.value))} />
+                <span className="font-bold text-xl w-12 text-right" style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>{wachstum} %</span>
+              </div>
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>0 % (konstant)</span><span>25 %</span><span>50 %</span>
               </div>
             </div>
           </div>
@@ -405,35 +449,43 @@ export default function Calculator() {
                 accent="#3D5278" />
             </div>
 
-            <div className="rounded-2xl p-5 shadow-sm text-white" style={{ background: "#3D5278" }}>
-              <div className="text-sm font-semibold uppercase tracking-wide mb-3" style={{ color: "#AADD00", fontFamily: "var(--font-heading)" }}>
-                3-Jahres-Perspektive
+            {/* Jahresvergleich */}
+            <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: "#3D5278" }}>
+              <div className="px-5 pt-4 pb-3 flex items-center justify-between">
+                <span className="text-sm font-bold uppercase tracking-wide" style={{ color: "#AADD00", fontFamily: "var(--font-heading)" }}>
+                  Jahresvergleich
+                </span>
+                <span className="text-xs text-white/60">
+                  {wachstum > 0 ? `+${wachstum} % Terminwachstum p.a.` : "Konstante Terminanzahl"}
+                </span>
               </div>
-              <div className="grid grid-cols-3 gap-2 text-center">
-                <div>
-                  <div className="text-xs opacity-70 mb-1">Gewinn Jahr 1</div>
-                  <div className="font-bold text-lg">{fmt(ergebnis.gewinnJahr1)} €</div>
-                </div>
-                <div className="border-x border-white/20">
-                  <div className="text-xs opacity-70 mb-1">Gewinn 3 Jahre</div>
-                  <div className="font-bold text-lg">{fmt(ergebnis.gewinnJahr3)} €</div>
-                </div>
-                <div>
-                  <div className="text-xs opacity-70 mb-1">ROI (3 Jahre)</div>
-                  <div className="font-bold text-lg" style={{ color: "#AADD00" }}>{fmt(ergebnis.roiJahr3, 0)} %</div>
+              <div className="grid grid-cols-3 divide-x divide-white/10">
+                {ergebnis.jahre.map((j, i) => {
+                  const vorjahr = i > 0 ? ergebnis.jahre[i - 1].gewinn : null;
+                  const delta   = vorjahr !== null && vorjahr !== 0
+                    ? ((j.gewinn - vorjahr) / Math.abs(vorjahr)) * 100
+                    : null;
+                  return (
+                    <div key={i} className="px-4 py-4 text-center">
+                      <div className="text-xs font-bold uppercase tracking-wide mb-2 opacity-60 text-white">Jahr {i + 1}</div>
+                      <div className="text-xs text-white/50 mb-0.5">{j.termine} Termine / Mo.</div>
+                      <div className="font-bold text-xl text-white leading-tight">{fmt(j.gewinn)} €</div>
+                      <div className="text-xs mt-1" style={{ color: "#AADD00" }}>
+                        {delta !== null
+                          ? `▲ +${fmt(delta, 0)} % ggü. Vorjahr`
+                          : <span className="opacity-0">–</span>}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+              <div className="mx-4 mb-4 mt-1 rounded-xl px-4 py-3 flex items-center justify-between" style={{ background: "rgba(255,255,255,0.08)" }}>
+                <span className="text-sm text-white/70">Gesamt 3 Jahre</span>
+                <div className="text-right">
+                  <span className="font-bold text-lg text-white">{fmt(ergebnis.gewinnGesamt3J)} €</span>
+                  <span className="text-xs ml-3" style={{ color: "#AADD00" }}>ROI {fmt(ergebnis.roiJahr3, 0)} %</span>
                 </div>
               </div>
-            </div>
-
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
-              <h3 className="font-bold text-sm uppercase tracking-wide mb-4" style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
-                Amortisationsverlauf (36 Monate)
-              </h3>
-              <AmortizationChart
-                investition={investition}
-                cashGewinnMonat={ergebnis.cashGewinn}
-                breakEvenMonate={ergebnis.breakEvenMonate}
-              />
             </div>
 
             <div className="bg-white rounded-2xl p-5 shadow-sm text-xs text-gray-500 space-y-1">
