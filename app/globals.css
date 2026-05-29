@@ -1,9 +1,32 @@
 @import "tailwindcss";
-@import url('https://fonts.googleapis.com/css2?family=Jost:wght@300;400;500;600;700&display=swap');
 
 @font-face {
   font-family: 'VitoWide';
   src: url('/fonts/VitoWideBold.otf') format('opentype');
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Futura';
+  src: url('/fonts/FuturaBook.ttf') format('truetype');
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Futura';
+  src: url('/fonts/FuturaMedium.ttf') format('truetype');
+  font-weight: 500;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: 'Futura';
+  src: url('/fonts/FuturaBold.ttf') format('truetype');
   font-weight: 700;
   font-style: normal;
   font-display: swap;
@@ -14,8 +37,8 @@
   --foreground: #1a1a2e;
   --lime: #AADD00;
   --navy: #3D5278;
-  --font-heading: 'VitoWide', 'Jost', Arial, sans-serif;
-  --font-body: 'Jost', Arial, sans-serif;
+  --font-heading: 'VitoWide', 'Futura', Arial, sans-serif;
+  --font-body: 'Futura', Arial, sans-serif;
 }
 
 body {
