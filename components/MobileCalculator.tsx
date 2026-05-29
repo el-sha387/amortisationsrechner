@@ -20,23 +20,24 @@ interface DL {
 
 const DEFAULT_PRODUKTE: Produkt[] = [
   // Messtechnik
-  { id: "sattel-app",    name: "Sattel-Druck App",             preis: 2490 },
-  { id: "sattel-map",    name: "Sattel-Druckmessung",          preis: 4990 },
-  { id: "fuss-map",      name: "Fußdruckmessung",              preis: 4990 },
-  { id: "bundle-sf",     name: "Bundle Sattel + Fuß",          preis: 7990 },
-  { id: "velogic-ess",  name: "Velogic Essentials (1 Kamera)", preis: 1849, lizenzJahr1: 2800, lizenzJahrFolge: 1150 },
-  { id: "velogic-pro",  name: "Velogic PRO (2 Kameras)",       preis: 2990, lizenzJahr1: 4200, lizenzJahrFolge: 1700 },
-  { id: "advantage360",  name: "Advantage 360 (jährl.)",       preis:  490 },
+  { id: "sattel-app",        name: "Sattel-Druck App",                    preis: 2490, lizenzJahr1: 490, lizenzJahrFolge: 490 },
+  { id: "sattel-map",        name: "Sattel-Druckmessung",                 preis: 4990 },
+  { id: "lenker-map",        name: "Lenkerdruckmessung",                  preis: 3900 },
+  { id: "fuss-map",          name: "Fußdruckmessung",                     preis: 4990 },
+  { id: "bundle-sf",         name: "Bundle Sattel + Fuß",                 preis: 7990 },
+  { id: "velogic-ess",       name: "Velogic Essentials (1 Kamera)",       preis: 1849, lizenzJahr1: 2800, lizenzJahrFolge: 1150 },
+  { id: "velogic-pro",       name: "Velogic PRO (2 Kameras)",             preis: 2990, lizenzJahr1: 4200, lizenzJahrFolge: 1700 },
+  { id: "advantage360",      name: "Advantage 360 (jährl.)",              preis:  490 },
   // Starter Kits Komponenten
-  { id: "kit-sattel-crmo",   name: "Starter Kit Sättel 5× CrMo (EK)",      preis: Math.round(5  * 52.92) },   // 265 €
-  { id: "kit-sattel-titan",  name: "Starter Kit Sättel 10× Titan (EK)",     preis: Math.round(10 * 92.60) },   // 926 €
-  { id: "kit-push-einlagen", name: "Starter Kit PUSH Einlagen 9 Paar (EK)", preis: Math.round(9  * 68.80) },   // 619 €
+  { id: "kit-sattel-crmo",   name: "Starter Kit Sättel 5× CrMo (EK)",      preis: Math.round(5  * 52.92) },
+  { id: "kit-sattel-titan",  name: "Starter Kit Sättel 10× Titan (EK)",     preis: Math.round(10 * 92.60) },
+  { id: "kit-push-einlagen", name: "Starter Kit PUSH Einlagen 9 Paar (EK)", preis: Math.round(9  * 68.80) },
 ];
 
 const DEFAULT_OPTIONEN: Option[] = [
-  { name: "Option 1", produktIds: ["sattel-app"]  },
-  { name: "Option 2", produktIds: ["sattel-map"]  },
-  { name: "Option 3", produktIds: ["bundle-sf"]   },
+  { name: "Option 1", produktIds: ["sattel-app"] },
+  { name: "Option 2", produktIds: ["sattel-map", "velogic-ess"] },
+  { name: "Option 3", produktIds: ["sattel-map", "lenker-map", "velogic-pro"] },
 ];
 
 const DEFAULT_D1: DL = {
