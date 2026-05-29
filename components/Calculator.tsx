@@ -781,9 +781,11 @@ export default function Calculator() {
                   sub={positiv ? (calcMode === "monat" ? "Monatlicher Gewinn" : "Gewinn je Termin") : "Noch nicht rentabel"}
                   accent={positiv ? "#3D5278" : "#ef4444"} highlight/>
                 <MetricCard
-                  label="Break-Even"
+                  label="Amortisation"
                   value={positiv ? `${fmt(ergebnis.breakEvenMonate, 1)} Monate` : "–"}
-                  sub={positiv ? `${fmt(ergebnis.breakEvenTermine, 0)} Termine / Monat kostendeckend` : "Termine erhöhen"}
+                  sub={positiv
+                    ? `Kostendeckung ab ${fmt(ergebnis.breakEvenTermine, 0)} Terminen / Mo. (du planst ${termine})`
+                    : "Termine erhöhen"}
                   accent="#3D5278"/>
               </div>
             </div>

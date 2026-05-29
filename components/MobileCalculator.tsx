@@ -519,10 +519,12 @@ export default function MobileCalculator() {
   );
 
   // Berechnungen — Jahr 1 mit lizenzJahr1, Folgejahre mit lizenzJahrFolge
-  const basis  = useMemo(() => berechne(investition, termine,        gehalt, raumkosten, mix, d1, d2, velogicLiz.jahr1   / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
-  const starr  = useMemo(() => berechne(investition, termine,        gehalt, raumkosten, mix, d1, d2, velogicLiz.jahr1   / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
-  const variJ2 = useMemo(() => berechne(investition, termine * 1.10, gehalt, raumkosten, mix, d1, d2, velogicLiz.jahrFolge / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
-  const variJ3 = useMemo(() => berechne(investition, termine * 1.20, gehalt, raumkosten, mix, d1, d2, velogicLiz.jahrFolge / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
+  const basis      = useMemo(() => berechne(investition, termine,        gehalt, raumkosten, mix, d1, d2, velogicLiz.jahr1    / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
+  const starrFolge = useMemo(() => berechne(investition, termine,        gehalt, raumkosten, mix, d1, d2, velogicLiz.jahrFolge / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
+  const variJ2     = useMemo(() => berechne(investition, termine * 1.10, gehalt, raumkosten, mix, d1, d2, velogicLiz.jahrFolge / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
+  const variJ3     = useMemo(() => berechne(investition, termine * 1.20, gehalt, raumkosten, mix, d1, d2, velogicLiz.jahrFolge / 12), [investition, termine, gehalt, raumkosten, mix, d1, d2, velogicLiz]);
+  // starr = alias für basis (Jahr 1, gleiche Termine) — wird für Abwärtskompatibilität behalten
+  const starr = basis;
 
   function anzeige(monatsWert: number) {
     if (calcMode === "monat") return `${fmt(monatsWert)} €`;
@@ -948,9 +950,12 @@ export default function MobileCalculator() {
               : `${fmt(basis.umsatzTermin, 2)} € Umsatz / Termin`}/>
           <ResultRow label={`Kosten ${modeLabel}`} value={anzeige(basis.ausgaben)}
             sub="inkl. Abschreibung, Gehalt, Raum"/>
-          <ResultRow label="Break-Even"
+          <ResultRow label="Amortisation Investition"
             value={basis.breakEvenMonate < Infinity ? `${fmt(basis.breakEvenMonate, 1)} Monate` : "–"}
-            sub={`ab ${fmt(basis.breakEvenTermine, 0)} Terminen / Monat`}/>
+            sub="Zeitraum bis Investition zurückgeflossen"/>
+          <ResultRow label="Kostendeckung ab"
+            value={basis.breakEvenTermine < Infinity ? `${fmt(basis.breakEvenTermine, 0)} Termine / Mo.` : "–"}
+            sub={`Du planst ${termine} Termine → ${termine >= Math.ceil(basis.breakEvenTermine) ? "✓ rentabel" : "noch nicht kostendeckend"}`}/>
         </div>
 
         {/* Jahreskennzahl */}
@@ -1000,11 +1005,19 @@ export default function MobileCalculator() {
             </span>
           </div>
           <div className="bg-white px-4 divide-y divide-gray-100">
-            {[starr, starr, starr].map((j, i) => (
+            {([basis, starrFolge, starrFolge] as const).map((j, i) => (
               <div key={i} className="py-3 flex justify-between items-center">
                 <div>
-                  <div className={`font-semibold text-gray-700 ${isTablet ? "text-base" : "text-sm"}`}>
-                    Jahr {i + 1}
+                  <div className="flex items-center gap-2">
+                    <span className={`font-semibold text-gray-700 ${isTablet ? "text-base" : "text-sm"}`}>
+                      Jahr {i + 1}
+                    </span>
+                    {i > 0 && velogicLiz.jahrFolge < velogicLiz.jahr1 && (
+                      <span className="text-xs font-bold px-1.5 py-0.5 rounded-md"
+                        style={{ background: "rgba(170,221,0,0.15)", color: "#3D5278" }}>
+                        Lizenz ↓
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-gray-400">{termine} Termine / Mo. · {fmt(j.einnahmen * 12)} € Einnahmen</div>
                 </div>
@@ -1015,7 +1028,9 @@ export default function MobileCalculator() {
             <div className="py-3 flex justify-between items-center">
               <span className={`font-bold text-gray-700 ${isTablet ? "text-base" : "text-sm"}`}>Gesamt 3 Jahre</span>
               <span className={`font-bold ${isTablet ? "text-xl" : "text-lg"}`}
-                style={{ color: "#3D5278" }}>{fmt(starr.ueberschuss * 36)} €</span>
+                style={{ color: "#3D5278" }}>
+                {fmt((basis.ueberschuss + starrFolge.ueberschuss * 2) * 12)} €
+              </span>
             </div>
           </div>
         </div>
