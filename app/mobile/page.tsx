@@ -1,8 +1,8 @@
-import MobileCalculator from "@/components/MobileCalculator";
+﻿import MobileCalculator from "@/components/MobileCalculator";
 
 export const metadata = {
-  title: "Rentabilitätsrechner – gebioMized",
-  description: "Mobile Amortisationsrechner",
+  title: "AiRO Rentabilitaetsrechner",
+  description: "Mobile AiRO ROI-Rechner",
 };
 
 export default function MobilePage() {
