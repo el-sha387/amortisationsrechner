@@ -1,159 +1,101 @@
 "use client";
 
 import { useState, useMemo } from "react";
+import Image from "next/image";
 
-// ─── Interfaces ───────────────────────────────────────────────────────────────
+// AiRO CI
+const AIRO_BLACK  = "#0d0d0d";
+const AIRO_GOLD   = "#F5A800";
+const AIRO_GOLD2  = "#c98b00";   // dunkleres Gold für Hover/Borders
 
-interface Produkt {
-  id: string; name: string; preis: number;
-  lizenzJahr1?: number;    // jährliche Lizenz Jahr 1
-  lizenzJahrFolge?: number; // jährliche Lizenz ab Jahr 2
-}
-interface Option  { name: string; produktIds: string[]; }
+// ─── Typen ────────────────────────────────────────────────────────────────────
 
-interface Dienstleistung {
+interface SessionTyp {
+  id: string;
   name: string;
-  uvpLabel: string;
-  dlNetto: number;
-  sattelAnteil: number;
-  sattelUvp: number;
-  sattelEK: number;
+  dauerMin: number;
+  preisNetto: number;
 }
 
-interface Einstellungen {
-  d1: Dienstleistung;
-  d2: Dienstleistung;
+interface Paket {
+  id: "starter" | "pro";
+  name: string;
+  twinsJahr: number;
+  kostenProTwin: number;
+  jahreslizenz: number;
 }
 
 interface Annahmen {
-  abschreibungMonate: number;
-  lizenzMonat: number;
-  ersatzfolieGesamt: number;
   raumQm: number;
   iscoJahr: number;
-  arbeitszeitTermin: number;
+  arbeitszeitPuffer: number;
   lohnNebenkosten: number;
   vollzeitStunden: number;
 }
 
-// ─── Standardwerte ────────────────────────────────────────────────────────────
+// ─── Stammdaten ───────────────────────────────────────────────────────────────
 
-const DEFAULT_PRODUKTE: Produkt[] = [
-  { id: "sattel-app",        name: "Sattel-Druck App",                    preis: 2490, lizenzJahr1: 490, lizenzJahrFolge: 490 },
-  { id: "sattel-map",        name: "Sattel-Druckmessung",                 preis: 4990 },
-  { id: "lenker-map",        name: "Lenkerdruckmessung",                  preis: 3900 },
-  { id: "fuss-map",          name: "Fußdruckmessung",                     preis: 4990 },
-  { id: "bundle-sf",         name: "Bundle Sattel + Fuß",                 preis: 7990 },
-  { id: "velogic-ess",       name: "Velogic Essentials (1 Kamera)",       preis: 1849, lizenzJahr1: 2800, lizenzJahrFolge: 1150 },
-  { id: "velogic-pro",       name: "Velogic PRO (2 Kameras)",             preis: 2990, lizenzJahr1: 4200, lizenzJahrFolge: 1700 },
-  { id: "advantage360",      name: "Advantage 360 (jährl.)",              preis:  490 },
-  { id: "kit-sattel-crmo",   name: "Starter Kit Sättel 5× CrMo (EK)",    preis: Math.round(5  * 52.92) },
-  { id: "kit-sattel-titan",  name: "Starter Kit Sättel 10× Titan (EK)",  preis: Math.round(10 * 92.60) },
-  { id: "kit-push-einlagen", name: "Starter Kit PUSH Einlagen 9 Paar",   preis: Math.round(9  * 68.80) },
+const SESSION_TYPEN: SessionTyp[] = [
+  { id: "helm",      name: "Helmberatung",         dauerMin: 60,  preisNetto: 167.23 },
+  { id: "addon",     name: "AiRO als Aero Add-On", dauerMin: 30,  preisNetto: 83.19  },
+  { id: "aero",      name: "Aero Fit Potential",   dauerMin: 60,  preisNetto: 167.23 },
+  { id: "windkanal", name: "Digitaler Windkanal",  dauerMin: 150, preisNetto: 411.76 },
 ];
 
-const DEFAULT_OPTIONEN: Option[] = [
-  { name: "Option 1", produktIds: ["sattel-app"] },
-  { name: "Option 2", produktIds: ["sattel-map", "velogic-ess"] },
-  { name: "Option 3", produktIds: ["sattel-map", "lenker-map", "velogic-pro"] },
+const PAKETE: Paket[] = [
+  { id: "starter", name: "Starter", twinsJahr: 50,  kostenProTwin: 50, jahreslizenz: 2500 },
+  { id: "pro",     name: "PRO",     twinsJahr: 100, kostenProTwin: 35, jahreslizenz: 3500 },
 ];
-
-const DEFAULT_EINSTELLUNGEN: Einstellungen = {
-  d1: {
-    name: "Sattel-Analyse", uvpLabel: "99 € UVP",
-    dlNetto: 83.20, sattelAnteil: 70, sattelUvp: 88.60, sattelEK: 0,
-  },
-  d2: {
-    name: "Bikefitting Basis", uvpLabel: "149 € UVP",
-    dlNetto: 125.21, sattelAnteil: 50, sattelUvp: 77.62, sattelEK: 0,
-  },
-};
 
 const DEFAULT_ANNAHMEN: Annahmen = {
-  abschreibungMonate: 36, lizenzMonat: 25, ersatzfolieGesamt: 749,
-  raumQm: 10, iscoJahr: 348, arbeitszeitTermin: 1.25,
-  lohnNebenkosten: 20, vollzeitStunden: 172,
+  raumQm: 10,
+  iscoJahr: 348,
+  arbeitszeitPuffer: 15,
+  lohnNebenkosten: 20,
+  vollzeitStunden: 172,
 };
 
-// ─── Hilfsfunktionen ─────────────────────────────────────────────────────────
+const DEFAULT_MENGEN: Record<string, number> = {
+  helm: 4, addon: 8, aero: 4, windkanal: 2,
+};
 
-function getOptionPreis(opt: Option, produkte: Produkt[]): number {
-  return opt.produktIds.reduce((sum, pid) => {
-    return sum + (produkte.find(p => p.id === pid)?.preis ?? 0);
-  }, 0);
-}
-
-function getOptionModule(opt: Option, produkte: Produkt[]): Produkt[] {
-  return opt.produktIds.map(pid => produkte.find(p => p.id === pid)).filter(Boolean) as Produkt[];
-}
-
-function getVelogicLizenzen(optionIdx: number | null, optionen: Option[], produkte: Produkt[]) {
-  if (optionIdx === null) return { jahr1: 0, jahrFolge: 0 };
-  return optionen[optionIdx].produktIds.reduce(
-    (acc, pid) => {
-      const p = produkte.find(x => x.id === pid);
-      return p ? { jahr1: acc.jahr1 + (p.lizenzJahr1 ?? 0), jahrFolge: acc.jahrFolge + (p.lizenzJahrFolge ?? 0) } : acc;
-    },
-    { jahr1: 0, jahrFolge: 0 }
-  );
-}
-
-function sattelMarge(uvp: number, ek: number) {
-  // UVP = Brutto-Endkundenpreis (inkl. 19% MwSt.)
-  // EK  = Netto-Einkaufspreis (ohne MwSt., B2B)
-  // Netto-Marge = UVP_netto − EK_netto
-  return uvp / 1.19 - ek;
-}
-
-function berechneMonat(
-  investition: number, termine: number, gehalt: number,
-  raumkosten: number, mixAnteil: number, a: Annahmen, e: Einstellungen,
-  velogicLizenzMonat = 0
-) {
-  const d1Umsatz = e.d1.dlNetto + (e.d1.sattelAnteil / 100) * sattelMarge(e.d1.sattelUvp, e.d1.sattelEK);
-  const d2Umsatz = e.d2.dlNetto + (e.d2.sattelAnteil / 100) * sattelMarge(e.d2.sattelUvp, e.d2.sattelEK);
-  const abschreibungMonat  = investition / a.abschreibungMonate;
-  const technikLaufend     = a.lizenzMonat + a.ersatzfolieGesamt / a.abschreibungMonate + velogicLizenzMonat;
-  const variableKostenSatz = gehalt * (1 + a.lohnNebenkosten / 100) * a.arbeitszeitTermin / a.vollzeitStunden;
-  const mitarbeiter        = variableKostenSatz * termine;
-  const raum    = raumkosten * a.raumQm;
-  const isco    = a.iscoJahr / 12;
-  const fixeKosten = abschreibungMonat + technikLaufend + raum + isco;
-  const ausgaben   = fixeKosten + mitarbeiter;
-  const umsatzTermin = (1 - mixAnteil) * d1Umsatz + mixAnteil * d2Umsatz;
-  const einnahmen    = termine * umsatzTermin;
-  const ueberschuss  = einnahmen - ausgaben;
-  const cashGewinn   = ueberschuss + abschreibungMonat;
-  // Break-Even Termine: fixe Kosten / (Umsatz je Termin − variable Kosten je Termin)
-  const breakEvenTermine = umsatzTermin > variableKostenSatz
-    ? fixeKosten / (umsatzTermin - variableKostenSatz) : Infinity;
-  return { ausgaben, einnahmen, ueberschuss, cashGewinn, umsatzTermin,
-           d1Umsatz, d2Umsatz, abschreibungMonat, breakEvenTermine, fixeKosten };
-}
+// ─── Berechnung ───────────────────────────────────────────────────────────────
 
 function berechne(
-  investition: number, termine: number, gehalt: number, raumkosten: number,
-  mixAnteil: number, wachstum: number, a: Annahmen, e: Einstellungen,
-  velogicLizenzJahr1 = 0, velogicLizenzJahrFolge = 0
+  mengen: Record<string, number>,
+  paket: Paket,
+  gehalt: number,
+  raumkosten: number,
+  a: Annahmen,
 ) {
-  const liz1 = velogicLizenzJahr1 / 12;
-  const lizF = velogicLizenzJahrFolge / 12;
-  const j1 = berechneMonat(investition, termine,                             gehalt, raumkosten, mixAnteil, a, e, liz1);
-  const j2 = berechneMonat(investition, termine * (1 + wachstum / 100),      gehalt, raumkosten, mixAnteil, a, e, lizF);
-  const j3 = berechneMonat(investition, termine * (1 + wachstum / 100) ** 2, gehalt, raumkosten, mixAnteil, a, e, lizF);
-  const breakEvenMonate  = j1.cashGewinn > 0 ? investition / j1.cashGewinn : Infinity;
-  const breakEvenTermine = j1.breakEvenTermine;
-  const jahre = [
-    { termine: Math.round(termine),                             gewinn: j1.ueberschuss * 12, einnahmen: j1.einnahmen * 12, ausgaben: j1.ausgaben * 12 },
-    { termine: Math.round(termine * (1 + wachstum / 100)),      gewinn: j2.ueberschuss * 12, einnahmen: j2.einnahmen * 12, ausgaben: j2.ausgaben * 12 },
-    { termine: Math.round(termine * (1 + wachstum / 100) ** 2), gewinn: j3.ueberschuss * 12, einnahmen: j3.einnahmen * 12, ausgaben: j3.ausgaben * 12 },
-  ];
-  const gewinnGesamt3J = jahre.reduce((s, j) => s + j.gewinn, 0);
-  const roiJahr3       = investition > 0 ? (gewinnGesamt3J / investition) * 100 : 0;
-  return { ausgaben: j1.ausgaben, einnahmen: j1.einnahmen, ueberschuss: j1.ueberschuss,
-           cashGewinn: j1.cashGewinn, umsatzTermin: j1.umsatzTermin,
-           d1Umsatz: j1.d1Umsatz, d2Umsatz: j1.d2Umsatz,
-           breakEvenMonate, breakEvenTermine, jahre, gewinnGesamt3J, roiJahr3 };
+  const sessionsMonat = SESSION_TYPEN.reduce((s, t) => s + mengen[t.id], 0);
+  const einnahmen = SESSION_TYPEN.reduce((s, t) => s + mengen[t.id] * t.preisNetto, 0);
+  const lizenzkosten = sessionsMonat * paket.kostenProTwin;
+  const totalDauerMin = SESSION_TYPEN.reduce((s, t) => s + mengen[t.id] * t.dauerMin, 0);
+  const stundenGesamt = sessionsMonat > 0
+    ? (totalDauerMin + sessionsMonat * a.arbeitszeitPuffer) / 60
+    : 0;
+  const personalkosten = gehalt * (1 + a.lohnNebenkosten / 100) * stundenGesamt / a.vollzeitStunden;
+  const raumMonat = raumkosten * a.raumQm;
+  const iscoMonat = a.iscoJahr / 12;
+  const fixKosten = raumMonat + iscoMonat;
+  const ausgaben = lizenzkosten + personalkosten + fixKosten;
+  const ueberschuss = einnahmen - ausgaben;
+  const umsatzProSession = sessionsMonat > 0 ? einnahmen / sessionsMonat : 0;
+  const margeProSession = umsatzProSession - paket.kostenProTwin;
+  const sessionsJahr = sessionsMonat * 12;
+  const twinsUeberschuss = sessionsJahr - paket.twinsJahr;
+  const sparenMitPro = paket.id === "starter"
+    ? Math.max(0,
+        sessionsJahr * (PAKETE[0].kostenProTwin - PAKETE[1].kostenProTwin)
+        - (PAKETE[1].jahreslizenz - PAKETE[0].jahreslizenz)
+      )
+    : 0;
+  const jahresgewinn = ueberschuss * 12;
+
+  return { sessionsMonat, einnahmen, lizenzkosten, personalkosten, fixKosten,
+           ausgaben, ueberschuss, umsatzProSession, margeProSession,
+           sessionsJahr, twinsUeberschuss, sparenMitPro, jahresgewinn };
 }
 
 function fmt(val: number, digits = 0) {
@@ -162,42 +104,7 @@ function fmt(val: number, digits = 0) {
   });
 }
 
-// ─── Eingabe-Komponenten ──────────────────────────────────────────────────────
-
-function NumInput({ label, value, onChange, suffix = "", step = 1, min = 0, hint }: {
-  label: string; value: number; onChange: (v: number) => void;
-  suffix?: string; step?: number; min?: number; hint?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-semibold uppercase tracking-wide"
-        style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>{label}</label>
-      <div className="flex items-center gap-1.5">
-        <input type="number" step={step} min={min} value={value}
-          onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= min) onChange(v); }}
-          className="w-full border-2 rounded-xl px-3 py-2 text-right font-semibold focus:outline-none text-sm"
-          style={{ borderColor: "#e5e7eb", color: "#1f2937", fontFamily: "var(--font-body)" }}/>
-        {suffix && <span className="text-sm text-gray-400 whitespace-nowrap">{suffix}</span>}
-      </div>
-      {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
-    </div>
-  );
-}
-
-function TextInput({ label, value, onChange, hint }: {
-  label: string; value: string; onChange: (v: string) => void; hint?: string;
-}) {
-  return (
-    <div className="flex flex-col gap-1">
-      <label className="text-xs font-semibold uppercase tracking-wide"
-        style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>{label}</label>
-      <input type="text" value={value} onChange={e => onChange(e.target.value)}
-        className="w-full border-2 rounded-xl px-3 py-2 font-semibold focus:outline-none text-sm"
-        style={{ borderColor: "#e5e7eb", color: "#1f2937", fontFamily: "var(--font-body)" }}/>
-      {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
-    </div>
-  );
-}
+// ─── Sub-Komponenten ─────────────────────────────────────────────────────────
 
 function MetricCard({ label, value, sub, accent, highlight }: {
   label: string; value: string; sub: string; accent: string; highlight?: boolean;
@@ -222,23 +129,38 @@ function MetricCard({ label, value, sub, accent, highlight }: {
   );
 }
 
+function NumInput({ label, value, onChange, suffix = "", step = 1, min = 0, hint }: {
+  label: string; value: number; onChange: (v: number) => void;
+  suffix?: string; step?: number; min?: number; hint?: string;
+}) {
+  return (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs font-semibold uppercase tracking-wide"
+        style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>{label}</label>
+      <div className="flex items-center gap-1.5">
+        <input type="number" step={step} min={min} value={value}
+          onChange={e => { const v = parseFloat(e.target.value); if (!isNaN(v) && v >= min) onChange(v); }}
+          className="w-full border-2 rounded-xl px-3 py-2 text-right font-semibold focus:outline-none text-sm"
+          style={{ borderColor: "#e5e7eb", color: "#1f2937", fontFamily: "var(--font-body)" }}/>
+        {suffix && <span className="text-sm text-gray-400 whitespace-nowrap">{suffix}</span>}
+      </div>
+      {hint && <p className="text-xs text-gray-400 mt-0.5">{hint}</p>}
+    </div>
+  );
+}
+
 // ─── Print-Report ─────────────────────────────────────────────────────────────
 
-function PrintReport({ termine, mix, gehalt, raumkosten, investition, optionName,
-  optionModule, ergebnis, annahmen, einstellungen, printedAt, wachstum,
-  kundenName, velogicLiz }: {
-  termine: number; mix: number; gehalt: number; raumkosten: number;
-  investition: number; optionName: string; wachstum: number;
-  optionModule: Produkt[];
+function PrintReport({ mengen, paket, gehalt, raumkosten, ergebnis, annahmen,
+  kundenName, printedAt }: {
+  mengen: Record<string, number>; paket: Paket; gehalt: number;
+  raumkosten: number;
   ergebnis: ReturnType<typeof berechne>;
-  annahmen: Annahmen; einstellungen: Einstellungen;
-  printedAt: Date; kundenName: string;
-  velogicLiz: { jahr1: number; jahrFolge: number };
+  annahmen: Annahmen; kundenName: string; printedAt: Date;
 }) {
-  const navy = "#3D5278";
-  const lime = "#AADD00";
-  const fs   = 11;  // base font size — alles kompakt für 1 A4-Seite
-
+  const navy = "#0d0d0d";
+  const lime = "#F5A800";
+  const fs   = 11;
   const sH: React.CSSProperties = {
     fontSize: 9, fontWeight: 700, textTransform: "uppercase",
     letterSpacing: 1, color: navy, marginBottom: 6, marginTop: 0,
@@ -247,8 +169,7 @@ function PrintReport({ termine, mix, gehalt, raumkosten, investition, optionName
     <div style={{ display: "flex", justifyContent: "space-between",
       padding: "3px 0", borderBottom: "1px solid #f3f4f6", fontSize: fs }}>
       <span style={{ color: "#6b7280" }}>{label}</span>
-      <span style={{ fontWeight: bold ? 700 : 400,
-        color: accent ? navy : "#1f2937" }}>{value}</span>
+      <span style={{ fontWeight: bold ? 700 : 400, color: accent ? navy : "#1f2937" }}>{value}</span>
     </div>
   );
   const totalRow = (label: string, value: string) => (
@@ -259,28 +180,19 @@ function PrintReport({ termine, mix, gehalt, raumkosten, investition, optionName
     </div>
   );
 
-  const lizenzTotal3J     = velogicLiz.jahr1 + velogicLiz.jahrFolge * 2;
-  const abschreibungMonat = investition / annahmen.abschreibungMonate;
-  const technikMonat      = annahmen.lizenzMonat + annahmen.ersatzfolieGesamt / annahmen.abschreibungMonate;
-  const mitarbeiterMonat  = gehalt * (1 + annahmen.lohnNebenkosten / 100) *
-    ((termine * annahmen.arbeitszeitTermin) / annahmen.vollzeitStunden);
-  const raumMonat    = raumkosten * annahmen.raumQm;
-  const iscoMonat    = annahmen.iscoJahr / 12;
-  const velogicM1    = velogicLiz.jahr1 / 12;
-
   return (
     <div id="print-report" className="print-only">
     <div style={{ fontFamily: "Arial, sans-serif", color: "#1f2937", background: "white",
       padding: "20px 28px", fontSize: fs }}>
 
-      {/* ── Header ── */}
+      {/* Header */}
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center",
         paddingBottom: 10, marginBottom: kundenName ? 8 : 14, borderBottom: `3px solid ${lime}` }}>
-        <div>
-          <span style={{ fontWeight: 900, fontSize: 18, color: navy, letterSpacing: 2,
-            textTransform: "uppercase" }}>gebioMized</span>
-          <span style={{ fontSize: 10, color: "#9ca3af", marginLeft: 10 }}>
-            Bikefitting-Technologie · SnM gebioMized GmbH
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/airo-logo.png" alt="AiRO" style={{ height: 32, objectFit: "contain" }}/>
+          <span style={{ fontSize: 10, color: "#9ca3af", marginLeft: 8 }}>
+            Aerodynamik-Fitting
           </span>
         </div>
         <div style={{ textAlign: "right" }}>
@@ -291,7 +203,6 @@ function PrintReport({ termine, mix, gehalt, raumkosten, investition, optionName
         </div>
       </div>
 
-      {/* ── Anrede ── */}
       {kundenName && (
         <div style={{ marginBottom: 12 }}>
           <span style={{ fontSize: 12, color: "#1f2937" }}>Analyse für </span>
@@ -302,78 +213,58 @@ function PrintReport({ termine, mix, gehalt, raumkosten, investition, optionName
         </div>
       )}
 
-      {/* ── Obere 3 Spalten: Investition | Kosten | Einnahmen+Ergebnis ── */}
       <div style={{ display: "grid", gridTemplateColumns: "1.1fr 1fr 1fr", gap: 16, marginBottom: 12 }}>
 
-        {/* Spalte 1: Investition */}
+        {/* Spalte 1: Sessions */}
         <div>
-          <h3 style={sH}>Investition — {optionName}</h3>
-          {optionModule.map(m => (
-            <div key={m.id} style={{ padding: "3px 0", borderBottom: "1px solid #f3f4f6" }}>
-              <div style={{ display: "flex", justifyContent: "space-between", fontSize: fs }}>
-                <span style={{ color: "#374151" }}>{m.name}</span>
-                <span style={{ fontWeight: 600 }}>{m.preis.toLocaleString("de-DE")} €</span>
-              </div>
-              {(m.lizenzJahr1 ?? 0) > 0 && (
-                <div style={{ fontSize: 9, color: "#d97706" }}>
-                  Lizenz {m.lizenzJahr1!.toLocaleString("de-DE")} € J1
-                  · ab J2 {m.lizenzJahrFolge!.toLocaleString("de-DE")} €
-                </div>
-              )}
+          <h3 style={sH}>Session-Mix — {paket.name} ({paket.kostenProTwin} €/Twin)</h3>
+          {SESSION_TYPEN.map(t => mengen[t.id] > 0 ? (
+            <div key={t.id} style={{ padding: "3px 0", borderBottom: "1px solid #f3f4f6",
+              display: "flex", justifyContent: "space-between", fontSize: fs }}>
+              <span style={{ color: "#374151" }}>{t.name}</span>
+              <span style={{ fontWeight: 600 }}>{mengen[t.id]} × {fmt(t.preisNetto, 2)} €</span>
             </div>
-          ))}
-          {totalRow("Hardware", `${investition.toLocaleString("de-DE")} €`)}
-          {lizenzTotal3J > 0 && (
-            <div style={{ fontSize: 9, color: "#d97706", marginTop: 3 }}>
-              Lizenzen 3 Jahre: ~{lizenzTotal3J.toLocaleString("de-DE")} €
-            </div>
-          )}
+          ) : null)}
+          {totalRow(`${ergebnis.sessionsMonat} Sessions / Mo.`, `${fmt(ergebnis.einnahmen, 0)} €`)}
+          <div style={{ fontSize: 9, color: "#d97706", marginTop: 3 }}>
+            {ergebnis.sessionsJahr} Twins / Jahr · Paket: {paket.twinsJahr} inkl.
+          </div>
         </div>
 
         {/* Spalte 2: Kosten */}
         <div>
           <h3 style={sH}>Monatl. Kosten (Jahr 1)</h3>
-          {row("Abschreibung", `${fmt(abschreibungMonat, 0)} €`)}
-          {row("Technik & Lizenz", `${fmt(technikMonat, 0)} €`)}
-          {velogicM1 > 0 && row("Velogic-Lizenz", `${fmt(velogicM1, 0)} €`)}
-          {row("Mitarbeiter", `${fmt(mitarbeiterMonat, 0)} €`)}
-          {row("Raum", `${fmt(raumMonat, 0)} €`)}
-          {row("ISCO", `${fmt(iscoMonat, 0)} €`)}
+          {row(`AiRO-Lizenz (${paket.kostenProTwin} €/Twin)`, `${fmt(ergebnis.lizenzkosten, 0)} €`)}
+          {row("Mitarbeiter", `${fmt(ergebnis.personalkosten, 0)} €`)}
+          {row("Raum", `${fmt(raumkosten * annahmen.raumQm, 0)} €`)}
+          {row("ISCO", `${fmt(annahmen.iscoJahr / 12, 0)} €`)}
           {totalRow("Kosten gesamt", `${fmt(ergebnis.ausgaben, 0)} €`)}
         </div>
 
-        {/* Spalte 3: Einnahmen & Ergebnis */}
+        {/* Spalte 3: Ergebnis */}
         <div>
           <h3 style={sH}>Einnahmen & Ergebnis</h3>
-          {row(`${einstellungen.d1.name} (${Math.round((1-mix)*100)} %)`,
-            `${fmt(ergebnis.d1Umsatz, 2)} € / T.`)}
-          {row(`${einstellungen.d2.name} (${Math.round(mix*100)} %)`,
-            `${fmt(ergebnis.d2Umsatz, 2)} € / T.`)}
-          {row("Ø Umsatz / Termin", `${fmt(ergebnis.umsatzTermin, 2)} €`, true)}
-          {row("Termine / Monat", `${termine}`)}
+          {row("Ø Umsatz / Session", `${fmt(ergebnis.umsatzProSession, 2)} €`, true)}
+          {row("Lizenzkosten / Session", `${paket.kostenProTwin} €`)}
+          {row("Ø Marge / Session", `${fmt(ergebnis.margeProSession, 2)} €`, true, true)}
+          {row("Sessions / Monat", `${ergebnis.sessionsMonat}`)}
           {row("Einnahmen / Monat", `${fmt(ergebnis.einnahmen, 0)} €`, true)}
           <div style={{ borderTop: "1px solid #f3f4f6", marginTop: 3 }}/>
           {row("Überschuss / Monat", `${fmt(ergebnis.ueberschuss, 0)} €`, true, ergebnis.ueberschuss > 0)}
-          {row("Amortisation", ergebnis.breakEvenMonate < Infinity
-            ? `${fmt(ergebnis.breakEvenMonate, 1)} Monate` : "–")}
-          {row("Kostendeckung ab", ergebnis.breakEvenTermine < Infinity
-            ? `${fmt(ergebnis.breakEvenTermine, 0)} Terminen/Mo.` : "–")}
         </div>
       </div>
 
-      {/* ── Highlight-Banner ── */}
+      {/* Highlight-Banner */}
       <div style={{ background: navy, borderRadius: 8, padding: "10px 18px",
-        display: "grid", gridTemplateColumns: "1fr auto 1fr auto 1fr auto 1fr",
+        display: "grid", gridTemplateColumns: "1fr auto 1fr auto 1fr",
         alignItems: "center", gap: 8, marginBottom: 12 }}>
         {[
-          { label: "Jahresgewinn J1",    value: `${fmt(ergebnis.ueberschuss * 12)} €`,  color: lime,  big: true },
-          { label: "ROI 3 Jahre",        value: `${fmt(ergebnis.roiJahr3, 0)} %`,         color: "white", big: true },
-          { label: "Gewinn 3 J. gesamt", value: `${fmt(ergebnis.gewinnGesamt3J)} €`,      color: "white", big: false },
-          { label: "Amortisation",       value: ergebnis.breakEvenMonate < Infinity
-              ? `${fmt(ergebnis.breakEvenMonate, 1)} Mo.` : "–",                          color: lime,  big: false },
+          { label: "Jahresgewinn",    value: `${fmt(ergebnis.jahresgewinn)} €`,          color: lime,    big: true  },
+          { label: "Überschuss / Mo.", value: `${fmt(ergebnis.ueberschuss)} €`,          color: "white", big: true  },
+          { label: "Marge / Session", value: `${fmt(ergebnis.margeProSession, 2)} €`,    color: lime,    big: false },
         ].flatMap((item, i) => [
           i > 0 ? <div key={`d${i}`} style={{ width: 1, height: 36, background: "rgba(255,255,255,0.15)", justifySelf: "center" }}/> : null,
-          <div key={i} style={{ textAlign: i === 1 ? "center" : i >= 2 ? "right" : "left" }}>
+          <div key={i} style={{ textAlign: i === 2 ? "right" : i === 1 ? "center" : "left" }}>
             <div style={{ fontSize: 9, color: "rgba(255,255,255,0.6)", marginBottom: 2 }}>{item.label}</div>
             <div style={{ fontSize: item.big ? 20 : 15, fontWeight: 900, color: item.color, lineHeight: 1 }}>
               {item.value}
@@ -382,56 +273,18 @@ function PrintReport({ termine, mix, gehalt, raumkosten, investition, optionName
         ])}
       </div>
 
-      {/* ── 3-Jahres-Prognose ── */}
-      <h3 style={{ ...sH, marginBottom: 6 }}>
-        3-Jahres-Prognose{wachstum > 0 ? ` (+${wachstum} % Terminwachstum p.a.)` : " (konstante Terminanzahl)"}
-      </h3>
-      <table style={{ width: "100%", borderCollapse: "collapse", marginBottom: 12, fontSize: fs }}>
-        <thead>
-          <tr style={{ background: "#f4f6f9" }}>
-            {["Jahr", "Termine/Mo.", "Einnahmen p.a.", "Kosten p.a.", "Gewinn p.a."].map(h => (
-              <th key={h} style={{ textAlign: h === "Jahr" ? "left" : "right",
-                padding: "5px 8px", color: navy, fontWeight: 700, fontSize: 10 }}>{h}</th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {ergebnis.jahre.map((j, i) => (
-            <tr key={i} style={{ borderBottom: "1px solid #f0f0f0",
-              background: i % 2 === 0 ? "white" : "#fafafa" }}>
-              <td style={{ padding: "5px 8px", fontWeight: 600 }}>Jahr {i + 1}</td>
-              <td style={{ textAlign: "right", padding: "5px 8px" }}>{j.termine}</td>
-              <td style={{ textAlign: "right", padding: "5px 8px" }}>{fmt(j.einnahmen)} €</td>
-              <td style={{ textAlign: "right", padding: "5px 8px" }}>{fmt(j.ausgaben)} €</td>
-              <td style={{ textAlign: "right", padding: "5px 8px", fontWeight: 700,
-                color: j.gewinn >= 0 ? navy : "#ef4444" }}>{fmt(j.gewinn)} €</td>
-            </tr>
-          ))}
-          <tr style={{ background: navy }}>
-            <td colSpan={4} style={{ padding: "5px 8px", color: "white", fontWeight: 700, fontSize: 10 }}>
-              Gesamt 3 Jahre
-            </td>
-            <td style={{ textAlign: "right", padding: "5px 8px",
-              fontWeight: 900, color: lime, fontSize: 13 }}>
-              {fmt(ergebnis.gewinnGesamt3J)} €
-            </td>
-          </tr>
-        </tbody>
-      </table>
-
-      {/* ── Footer ── */}
+      {/* Footer */}
       <div style={{ borderTop: "1px solid #e5e7eb", paddingTop: 8,
         display: "flex", justifyContent: "space-between", alignItems: "center" }}>
         <div style={{ fontSize: 9, color: "#9ca3af", lineHeight: 1.5 }}>
-          Alle Beträge netto · Abschreibung linear {annahmen.abschreibungMonate} Monate
-          · Sattel-Marge abzgl. 19 % MwSt. · Unverbindliche Modellrechnung
+          Alle Beträge netto · AiRO {paket.name}: {paket.kostenProTwin} €/Twin · Unverbindliche Modellrechnung
         </div>
-        <div style={{ fontSize: 9, color: "#9ca3af", textAlign: "right" }}>
-          <span style={{ fontWeight: 700, color: navy }}>gebioMized</span>
-          {" · "}www.gebioMized.com
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/gebioMized-logo.png" alt="gebioMized" style={{ height: 20, objectFit: "contain" }}/>
+          <span style={{ fontSize: 9, color: "#9ca3af" }}>www.gebioMized.com</span>
         </div>
       </div>
-
     </div>
     </div>
   );
@@ -440,85 +293,41 @@ function PrintReport({ termine, mix, gehalt, raumkosten, investition, optionName
 // ─── Haupt-Komponente ─────────────────────────────────────────────────────────
 
 export default function Calculator() {
-  const [activeTab, setActiveTab] = useState<"rechner" | "annahmen" | "einstellungen">("rechner");
+  const [activeTab, setActiveTab] = useState<"rechner" | "annahmen">("rechner");
+  const [paketId, setPaketId] = useState<"starter" | "pro">("starter");
+  const [mengen, setMengen] = useState<Record<string, number>>(DEFAULT_MENGEN);
+  const [gehalt, setGehalt] = useState(2600);
+  const [raumkosten, setRaumkosten] = useState(14);
+  const [annahmen, setAnnahmen] = useState<Annahmen>(DEFAULT_ANNAHMEN);
+  const [kundenName, setKundenName] = useState("");
+  const [printedAt, setPrintedAt] = useState(() => new Date());
 
-  // Rechner-Inputs
-  const [optionIdx, setOptionIdx]             = useState<number | null>(0);
-  const [investition, setInvestition]         = useState(2490);
-  const [investitionInput, setInvestitionInput] = useState("2.490");
-  const [termine, setTermine]                 = useState(20);
-  const [gehalt, setGehalt]                   = useState(2600);
-  const [raumkosten, setRaumkosten]           = useState(14);
-  const [mix, setMix]                         = useState(0.5);
-  const [wachstum, setWachstum]               = useState(10);
-  const [calcMode, setCalcMode]               = useState<"monat" | "termin">("monat");
-  const [printedAt, setPrintedAt]             = useState(() => new Date());
-  const [kundenName, setKundenName]           = useState("");
+  const paket = PAKETE.find(p => p.id === paketId)!;
 
-  // Konfiguration
-  const [einstellungen, setEinstellungen] = useState<Einstellungen>(DEFAULT_EINSTELLUNGEN);
-  const [annahmen, setAnnahmen]           = useState<Annahmen>(DEFAULT_ANNAHMEN);
-  const [produkte, setProdukte]           = useState<Produkt[]>(DEFAULT_PRODUKTE);
-  const [optionen, setOptionen]           = useState<Option[]>(DEFAULT_OPTIONEN);
-
-  function setD(dl: "d1" | "d2", patch: Partial<Dienstleistung>) {
-    setEinstellungen(prev => ({ ...prev, [dl]: { ...prev[dl], ...patch } }));
-  }
   function setA<K extends keyof Annahmen>(key: K, val: Annahmen[K]) {
     setAnnahmen(prev => ({ ...prev, [key]: val }));
   }
 
-  const velogicLiz = useMemo(
-    () => getVelogicLizenzen(optionIdx, optionen, produkte),
-    [optionIdx, optionen, produkte]
-  );
-
   const ergebnis = useMemo(
-    () => berechne(investition, termine, gehalt, raumkosten, mix, wachstum, annahmen, einstellungen,
-                   velogicLiz.jahr1, velogicLiz.jahrFolge),
-    [investition, termine, gehalt, raumkosten, mix, wachstum, annahmen, einstellungen, velogicLiz]
+    () => berechne(mengen, paket, gehalt, raumkosten, annahmen),
+    [mengen, paket, gehalt, raumkosten, annahmen]
   );
 
-  function handleOptionKlick(idx: number) {
-    setOptionIdx(idx);
-    const betrag = getOptionPreis(optionen[idx], produkte);
-    setInvestition(betrag);
-    setInvestitionInput(betrag.toLocaleString("de-DE"));
-  }
-
-  function handleInvestitionInput(raw: string) {
-    setInvestitionInput(raw);
-    const parsed = parseInt(raw.replace(/\D/g, ""), 10);
-    if (!isNaN(parsed) && parsed >= 500) {
-      setInvestition(parsed);
-      setOptionIdx(null);
-    }
-  }
+  const positiv = ergebnis.ueberschuss > 0;
 
   async function handlePrint() {
     setPrintedAt(new Date());
     const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
     if (isIOS && navigator.share) {
-      await navigator.share({ title: "Rentabilitätsanalyse gebioMized", url: window.location.href });
+      await navigator.share({ title: "AiRO Rentabilitätsanalyse", url: window.location.href });
     } else {
       setTimeout(() => window.print(), 50);
     }
   }
 
-  // Darstellung je Modus
-  function anzeige(monatswert: number, digits = 0) {
-    if (calcMode === "monat") return `${fmt(monatswert, digits)} €`;
-    return `${fmt(termine > 0 ? monatswert / termine : 0, 2)} €`;
-  }
-  const modeLabel = calcMode === "monat" ? "/ Monat" : "/ Termin";
-
-  const positiv           = ergebnis.ueberschuss > 0;
-  const currentOptionName = optionIdx !== null ? optionen[optionIdx].name : "Eigene Eingabe";
-
   const tabs = [
-    { id: "rechner",       label: "Rechner"       },
-    { id: "annahmen",      label: "Annahmen"       },
-    { id: "einstellungen", label: "Einstellungen"  },
+    { id: "rechner",  label: "Rechner"  },
+    { id: "annahmen", label: "Annahmen" },
   ] as const;
 
   return (
@@ -526,14 +335,25 @@ export default function Calculator() {
     <div className="no-print max-w-5xl mx-auto px-4 py-6">
 
       {/* Header + Tabs */}
-      <div className="rounded-2xl mb-5 overflow-hidden shadow-md" style={{ background: "#3D5278" }}>
-        <div className="px-6 py-5">
-          <h1 className="text-2xl font-bold text-white leading-tight" style={{ fontFamily: "var(--font-heading)" }}>
-            Rentabilitätsrechner
-          </h1>
-          <p className="text-sm mt-0.5" style={{ color: "#AADD00", fontFamily: "var(--font-body)" }}>
-            gebioMized Bikefitting-Technologie · Deine Investition in Zahlen
-          </p>
+      <div className="rounded-2xl mb-5 overflow-hidden shadow-md" style={{ background: "#0d0d0d" }}>
+        <div className="px-6 py-5 flex items-center justify-between">
+          <div className="flex items-center gap-5">
+            <Image src="/airo-logo.png" alt="AiRO Logo" width={100} height={50}
+              style={{ objectFit: "contain" }}/>
+            <div>
+              <h1 className="text-xl font-bold text-white leading-tight" style={{ fontFamily: "var(--font-heading)" }}>
+                Rentabilitätsrechner
+              </h1>
+              <p className="text-xs mt-0.5" style={{ color: "#F5A800", fontFamily: "var(--font-body)" }}>
+                Aerodynamik-Fitting · powered by gebioMized · Deine Sessions in Zahlen
+              </p>
+            </div>
+          </div>
+          <div style={{ background: "white", borderRadius: 10, padding: "5px 10px",
+            display: "flex", alignItems: "center" }}>
+            <Image src="/gebioMized-logo.png" alt="gebioMized Logo" width={100} height={36}
+              style={{ objectFit: "contain" }}/>
+          </div>
         </div>
         <div className="flex px-6 gap-1 pb-0">
           {tabs.map(tab => (
@@ -541,7 +361,7 @@ export default function Calculator() {
               className="px-5 py-2.5 text-sm font-semibold rounded-t-xl transition-all"
               style={{
                 background: activeTab === tab.id ? "#f4f6f9" : "transparent",
-                color:      activeTab === tab.id ? "#3D5278" : "rgba(255,255,255,0.7)",
+                color:      activeTab === tab.id ? "#0d0d0d" : "rgba(255,255,255,0.7)",
                 fontFamily: "var(--font-body)",
               }}>
               {tab.label}
@@ -550,112 +370,106 @@ export default function Calculator() {
         </div>
       </div>
 
-      {/* ── Tab: Rechner ──────────────────────────────────────────────────────── */}
+      {/* ── Tab: Rechner ── */}
       {activeTab === "rechner" && (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
 
-          {/* ─ Linke Spalte: Inputs ─ */}
+          {/* Linke Spalte */}
           <div className="space-y-4">
 
-            {/* Investition */}
+            {/* Paket-Auswahl */}
             <div className="bg-white rounded-2xl p-5 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-3"
-                style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>Investition</h2>
-
-              {/* Options-Buttons */}
-              <div className="flex gap-2 mb-3">
-                {optionen.map((opt, i) => {
-                  const preis = getOptionPreis(opt, produkte);
-                  return (
-                    <button key={i} onClick={() => handleOptionKlick(i)}
-                      className="flex-1 py-2 px-2 rounded-xl text-sm font-semibold border-2 transition-all"
-                      style={{
-                        borderColor: optionIdx === i ? "#3D5278" : "#e5e7eb",
-                        background:  optionIdx === i ? "#3D5278" : "white",
-                        color:       optionIdx === i ? "white"   : "#374151",
-                        fontFamily:  "var(--font-body)",
-                      }}>
-                      <div>{opt.name}</div>
-                      <div className="text-xs font-normal opacity-80">
-                        {preis > 0 ? preis.toLocaleString("de-DE") : "–"} €
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-
-              {/* Enthaltene Module */}
-              {optionIdx !== null && (() => {
-                const module = getOptionModule(optionen[optionIdx], produkte);
-                if (module.length === 0) return null;
-                return (
-                  <div className="rounded-xl border border-gray-100 px-3 py-2.5 mb-3 bg-gray-50">
-                    <div className="text-xs font-bold uppercase tracking-wide mb-1.5"
-                      style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
-                      Enthaltene Module
+                style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>AiRO Paket</h2>
+              <div className="grid grid-cols-2 gap-3">
+                {PAKETE.map(p => (
+                  <button key={p.id} onClick={() => setPaketId(p.id)}
+                    className="rounded-xl border-2 p-4 text-left transition-all"
+                    style={{
+                      borderColor: paketId === p.id ? "#0d0d0d" : "#e5e7eb",
+                      background:  paketId === p.id ? "#0d0d0d" : "white",
+                    }}>
+                    <div className="font-bold text-base mb-0.5"
+                      style={{ color: paketId === p.id ? "#F5A800" : "#1f2937", fontFamily: "var(--font-heading)" }}>
+                      {p.name}
                     </div>
-                    <ul className="space-y-1">
-                      {module.map(m => (
-                        <li key={m.id} className="flex flex-col text-xs text-gray-600">
-                          <div className="flex items-center gap-2">
-                            <span className="w-1.5 h-1.5 rounded-full flex-none"
-                              style={{ background: "#AADD00" }}/>
-                            <span className="flex-1">{m.name}</span>
-                            <span className="text-gray-400">{m.preis.toLocaleString("de-DE")} €</span>
-                          </div>
-                          {(m.lizenzJahr1 ?? 0) > 0 && (
-                            <div className="ml-3.5 mt-0.5 text-orange-500 font-medium">
-                              + Lizenz: {m.lizenzJahr1!.toLocaleString("de-DE")} € / Jahr 1,
-                              ab Jahr 2: {m.lizenzJahrFolge!.toLocaleString("de-DE")} € / Jahr
-                            </div>
-                          )}
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-                );
-              })()}
-
-              {/* Freifeld */}
-              <div className="flex items-center gap-2">
-                <input type="text"
-                  className="flex-1 border-2 rounded-xl px-3 py-2 text-right font-semibold focus:outline-none"
-                  style={{ borderColor: optionIdx === null ? "#3D5278" : "#e5e7eb", fontFamily: "var(--font-body)" }}
-                  value={investitionInput}
-                  onChange={e => handleInvestitionInput(e.target.value)}
-                  onFocus={() => setOptionIdx(null)}/>
-                <span className="text-gray-500 font-medium">€</span>
+                    <div className="text-xs font-semibold"
+                      style={{ color: paketId === p.id ? "rgba(255,255,255,0.8)" : "#6b7280" }}>
+                      {p.kostenProTwin} € / Twin · {p.twinsJahr} Twins / Jahr
+                    </div>
+                    <div className="text-xs mt-1"
+                      style={{ color: paketId === p.id ? "rgba(255,255,255,0.6)" : "#9ca3af" }}>
+                      {p.jahreslizenz.toLocaleString("de-DE")} € / Jahr
+                    </div>
+                  </button>
+                ))}
               </div>
+
+              {paketId === "starter" && ergebnis.sparenMitPro > 0 && (
+                <div className="mt-3 rounded-xl px-4 py-3 text-xs font-semibold"
+                  style={{ background: "#fef9c3", color: "#854d0e" }}>
+                  💡 Mit PRO würdest du bei deinem Volumen {fmt(ergebnis.sparenMitPro)} € / Jahr sparen
+                </div>
+              )}
+
+              {ergebnis.twinsUeberschuss > 0 && (
+                <div className="mt-3 rounded-xl px-4 py-3 text-xs font-semibold"
+                  style={{ background: "#fef2f2", color: "#991b1b" }}>
+                  ⚠️ Du planst {ergebnis.sessionsJahr} Twins / Jahr — {ergebnis.twinsUeberschuss} über dem Paket-Limit
+                </div>
+              )}
             </div>
 
-            {/* Termine */}
+            {/* Session-Mix */}
             <div className="bg-white rounded-2xl p-5 shadow-sm">
-              <h2 className="font-bold text-sm uppercase tracking-wide mb-3"
-                style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
-                Geplante Termine / Monat
+              <h2 className="font-bold text-sm uppercase tracking-wide mb-4"
+                style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>
+                Sessions / Monat
               </h2>
-              <div className="flex items-center gap-3">
-                <input type="range" min={5} max={80} step={5} value={termine}
-                  onChange={e => setTermine(Number(e.target.value))}/>
-                <span className="font-bold text-xl w-10 text-right"
-                  style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>{termine}</span>
-              </div>
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>5</span><span>40 (realistisch)</span><span>80</span>
+              <div className="space-y-4">
+                {SESSION_TYPEN.map(t => (
+                  <div key={t.id}>
+                    <div className="flex items-center gap-3">
+                      <div className="flex-1">
+                        <div className="text-sm font-semibold" style={{ color: "#1f2937" }}>{t.name}</div>
+                        <div className="text-xs text-gray-400">
+                          {t.dauerMin} Min · {fmt(t.preisNetto, 2)} € netto ·{" "}
+                          <span className="font-semibold" style={{ color: "#0d0d0d" }}>
+                            Marge {fmt(t.preisNetto - paket.kostenProTwin, 2)} €
+                          </span>
+                        </div>
+                      </div>
+                      <input
+                        type="number" min={0} step={1} value={mengen[t.id]}
+                        onChange={e => {
+                          const v = parseInt(e.target.value, 10);
+                          setMengen(prev => ({ ...prev, [t.id]: isNaN(v) || v < 0 ? 0 : v }));
+                        }}
+                        className="w-16 border-2 rounded-xl px-2 py-2 text-center font-bold focus:outline-none text-sm"
+                        style={{ borderColor: "#e5e7eb", color: "#0d0d0d", fontFamily: "var(--font-body)" }}/>
+                      <span className="text-xs text-gray-400 w-8">/ Mo.</span>
+                    </div>
+                  </div>
+                ))}
+                <div className="pt-3 border-t border-gray-100 flex justify-between text-sm font-bold"
+                  style={{ color: "#0d0d0d" }}>
+                  <span>Gesamt</span>
+                  <span>{ergebnis.sessionsMonat} Sessions · {ergebnis.sessionsJahr} Twins / Jahr</span>
+                </div>
               </div>
             </div>
 
             {/* Gehalt */}
             <div className="bg-white rounded-2xl p-5 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-3"
-                style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
+                style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>
                 Mitarbeiter Bruttogehalt / Monat
               </h2>
               <div className="flex items-center gap-3">
                 <input type="range" min={2000} max={4000} step={100} value={gehalt}
                   onChange={e => setGehalt(Number(e.target.value))}/>
                 <span className="font-bold text-lg w-20 text-right"
-                  style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>
+                  style={{ color: "#0d0d0d", fontFamily: "var(--font-body)" }}>
                   {gehalt.toLocaleString("de-DE")} €
                 </span>
               </div>
@@ -667,178 +481,107 @@ export default function Calculator() {
             {/* Raumkosten */}
             <div className="bg-white rounded-2xl p-5 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-3"
-                style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>Raummiete / m²</h2>
+                style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>Raummiete / m²</h2>
               <div className="flex items-center gap-3">
                 <input type="range" min={8} max={25} step={1} value={raumkosten}
                   onChange={e => setRaumkosten(Number(e.target.value))}/>
                 <span className="font-bold text-lg w-16 text-right"
-                  style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>{raumkosten} €</span>
+                  style={{ color: "#0d0d0d", fontFamily: "var(--font-body)" }}>{raumkosten} €</span>
               </div>
-              <div className="text-xs text-gray-400 mt-1">Messfläche: {annahmen.raumQm} m²</div>
+              <div className="text-xs text-gray-400 mt-1">Fläche: {annahmen.raumQm} m²</div>
             </div>
 
-            {/* Mix */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
-              <h2 className="font-bold text-sm uppercase tracking-wide mb-1"
-                style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>Leistungs-Mix</h2>
-              <div className="flex justify-between text-xs text-gray-500 mb-2">
-                <span>{einstellungen.d1.name} ({einstellungen.d1.uvpLabel})</span>
-                <span>{einstellungen.d2.name} ({einstellungen.d2.uvpLabel})</span>
-              </div>
-              <input type="range" min={0} max={1} step={0.1} value={mix}
-                onChange={e => setMix(Number(e.target.value))}/>
-              <div className="flex justify-between mt-1">
-                <span className="text-sm font-semibold"
-                  style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>
-                  {Math.round((1 - mix) * 100)} %
-                </span>
-                <span className="text-xs text-gray-400 self-center">
-                  Ø {fmt(ergebnis.umsatzTermin, 2)} € / Termin
-                </span>
-                <span className="text-sm font-semibold"
-                  style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>
-                  {Math.round(mix * 100)} %
-                </span>
-              </div>
-            </div>
-
-            {/* Wachstum */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
-              <h2 className="font-bold text-sm uppercase tracking-wide mb-1"
-                style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
-                Terminwachstum Jahr 2 / 3
-              </h2>
-              <p className="text-xs text-gray-400 mb-3">Erwartete Steigerung der Terminanzahl pro Jahr</p>
-              <div className="flex items-center gap-3">
-                <input type="range" min={0} max={50} step={5} value={wachstum}
-                  onChange={e => setWachstum(Number(e.target.value))}/>
-                <span className="font-bold text-xl w-12 text-right"
-                  style={{ color: "#3D5278", fontFamily: "var(--font-body)" }}>{wachstum} %</span>
-              </div>
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>0 % (konstant)</span><span>25 %</span><span>50 %</span>
-              </div>
-            </div>
           </div>
 
-          {/* ─ Rechte Spalte: Ergebnisse ─ */}
+          {/* Rechte Spalte */}
           <div className="space-y-4">
 
-            {/* Ansicht-Toggle + Metriken */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <span className="text-xs font-bold uppercase tracking-wide text-gray-400"
-                  style={{ fontFamily: "var(--font-heading)" }}>Ergebnisse</span>
-                <div className="flex rounded-xl overflow-hidden border-2 text-xs"
-                  style={{ borderColor: "#e5e7eb" }}>
-                  {(["monat", "termin"] as const).map(mode => (
-                    <button key={mode} onClick={() => setCalcMode(mode)}
-                      className="px-3 py-1.5 font-semibold transition-all"
-                      style={{
-                        background: calcMode === mode ? "#3D5278" : "white",
-                        color:      calcMode === mode ? "white"   : "#6b7280",
-                        fontFamily: "var(--font-body)",
-                      }}>
-                      {mode === "monat" ? "pro Monat" : "pro Termin"}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-3">
-                <MetricCard
-                  label={`Einnahmen ${modeLabel}`}
-                  value={anzeige(ergebnis.einnahmen)}
-                  sub={`${fmt(ergebnis.umsatzTermin, 2)} € / Termin`}
-                  accent="#AADD00"/>
-                <MetricCard
-                  label={`Kosten ${modeLabel}`}
-                  value={anzeige(ergebnis.ausgaben)}
-                  sub="inkl. Abschreibung & Gehalt"
-                  accent="#e5e7eb"/>
-                <MetricCard
-                  label={`Überschuss ${modeLabel}`}
-                  value={`${positiv ? "" : "–"}${anzeige(Math.abs(ergebnis.ueberschuss))}`}
-                  sub={positiv ? (calcMode === "monat" ? "Monatlicher Gewinn" : "Gewinn je Termin") : "Noch nicht rentabel"}
-                  accent={positiv ? "#3D5278" : "#ef4444"} highlight/>
-                <MetricCard
-                  label="Amortisation"
-                  value={positiv ? `${fmt(ergebnis.breakEvenMonate, 1)} Monate` : "–"}
-                  sub={positiv
-                    ? `Kostendeckung ab ${fmt(ergebnis.breakEvenTermine, 0)} Terminen / Mo. (du planst ${termine})`
-                    : "Termine erhöhen"}
-                  accent="#3D5278"/>
-              </div>
+            {/* Metriken */}
+            <div className="grid grid-cols-2 gap-3">
+              <MetricCard
+                label="Einnahmen / Monat"
+                value={`${fmt(ergebnis.einnahmen)} €`}
+                sub={`Ø ${fmt(ergebnis.umsatzProSession, 2)} € / Session`}
+                accent="#F5A800"/>
+              <MetricCard
+                label="Kosten / Monat"
+                value={`${fmt(ergebnis.ausgaben)} €`}
+                sub={`davon Lizenz ${fmt(ergebnis.lizenzkosten)} €`}
+                accent="#e5e7eb"/>
+              <MetricCard
+                label="Überschuss / Monat"
+                value={`${positiv ? "" : "–"}${fmt(Math.abs(ergebnis.ueberschuss))} €`}
+                sub={positiv ? "Monatlicher Gewinn" : "Noch nicht rentabel"}
+                accent={positiv ? "#0d0d0d" : "#ef4444"} highlight/>
+              <MetricCard
+                label="Ø Marge / Session"
+                value={`${fmt(ergebnis.margeProSession, 2)} €`}
+                sub={`nach ${paket.kostenProTwin} € Lizenz/Twin`}
+                accent="#0d0d0d"/>
             </div>
 
-            {/* Jahresvergleich */}
-            <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: "#3D5278" }}>
-              <div className="px-5 pt-4 pb-3 flex items-center justify-between">
-                <span className="text-sm font-bold uppercase tracking-wide"
-                  style={{ color: "#AADD00", fontFamily: "var(--font-heading)" }}>Jahresvergleich</span>
-                <span className="text-xs text-white/60">
-                  {wachstum > 0 ? `+${wachstum} % Terminwachstum p.a.` : "Konstante Terminanzahl"}
-                </span>
+            {/* Kostenaufschlüsselung */}
+            <div className="bg-white rounded-2xl p-5 shadow-sm">
+              <div className="font-bold text-sm uppercase tracking-wide mb-3"
+                style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>
+                Kostenaufschlüsselung / Monat
               </div>
-              <div className="grid grid-cols-3 divide-x divide-white/10">
-                {ergebnis.jahre.map((j, i) => {
-                  const vorjahr = i > 0 ? ergebnis.jahre[i - 1].gewinn : null;
-                  const delta   = vorjahr !== null && vorjahr !== 0
-                    ? ((j.gewinn - vorjahr) / Math.abs(vorjahr)) * 100 : null;
-                  return (
-                    <div key={i} className="px-4 py-4 text-center">
-                      <div className="text-xs font-bold uppercase tracking-wide mb-2 opacity-60 text-white">
-                        Jahr {i + 1}
-                      </div>
-                      <div className="text-xs text-white/50 mb-0.5">{j.termine} Termine / Mo.</div>
-                      <div className="font-bold text-xl text-white leading-tight">{fmt(j.gewinn)} €</div>
-                      <div className="text-xs mt-1" style={{ color: "#AADD00" }}>
-                        {delta !== null
-                          ? `▲ +${fmt(delta, 0)} % ggü. Vorjahr`
-                          : <span className="opacity-0">–</span>}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-              <div className="mx-4 mb-4 mt-1 rounded-xl px-4 py-3 flex items-center justify-between"
-                style={{ background: "rgba(255,255,255,0.08)" }}>
-                <span className="text-sm text-white/70">Gesamt 3 Jahre</span>
-                <div className="text-right">
-                  <span className="font-bold text-lg text-white">{fmt(ergebnis.gewinnGesamt3J)} €</span>
-                  <span className="text-xs ml-3" style={{ color: "#AADD00" }}>
-                    ROI {fmt(ergebnis.roiJahr3, 0)} %
+              {[
+                { label: `AiRO-Lizenz (${ergebnis.sessionsMonat} × ${paket.kostenProTwin} €)`, val: ergebnis.lizenzkosten, accent: true },
+                { label: "Personalkosten",   val: ergebnis.personalkosten },
+                { label: "Raumkosten",       val: raumkosten * annahmen.raumQm },
+                { label: "ISCO / Sonstiges", val: annahmen.iscoJahr / 12 },
+              ].map(({ label, val, accent }) => (
+                <div key={label} className="flex justify-between items-center py-2 border-b border-gray-50 text-sm last:border-0">
+                  <span className="text-gray-500">{label}</span>
+                  <span className="font-semibold" style={{ color: accent ? "#0d0d0d" : "#1f2937" }}>
+                    {fmt(val)} €
                   </span>
                 </div>
+              ))}
+              <div className="flex justify-between items-center pt-3 mt-1 border-t-2 text-sm font-bold"
+                style={{ borderColor: "#0d0d0d", color: "#0d0d0d" }}>
+                <span>Gesamt</span>
+                <span>{fmt(ergebnis.ausgaben)} €</span>
               </div>
             </div>
 
-            {/* Berechnungsgrundlagen */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm text-xs text-gray-500 space-y-1">
-              <div className="font-semibold text-gray-700 mb-2">Berechnungsgrundlagen</div>
-              <div>· Messtechnik linear auf {annahmen.abschreibungMonate} Monate abgeschrieben</div>
-              {velogicLiz.jahr1 > 0 && (
-                <div className="font-semibold" style={{ color: "#3D5278" }}>
-                  · Velogic-Lizenz: {velogicLiz.jahr1.toLocaleString("de-DE")} € / Jahr 1 &middot; ab Jahr 2: {velogicLiz.jahrFolge.toLocaleString("de-DE")} € / Jahr (in Kosten enthalten)
-                </div>
-              )}
-              <div>· Sattelverkauf: {einstellungen.d1.name} {einstellungen.d1.sattelAnteil} % | {einstellungen.d2.name} {einstellungen.d2.sattelAnteil} %</div>
-              <div>· Sattel-Marge abzgl. 19 % MwSt.</div>
-              <div>· {annahmen.arbeitszeitTermin} Std. Arbeitszeit pro Termin (inkl. Admin & Report)</div>
-              <div>· Raumgröße: {annahmen.raumQm} m² · ISCO-Jahreskurs: {annahmen.iscoJahr} €</div>
-              <div>· Alle Beträge netto (ohne MwSt.)</div>
+            {/* Jahreszusammenfassung */}
+            <div className="rounded-2xl overflow-hidden shadow-sm" style={{ background: "#0d0d0d" }}>
+              <div className="px-5 pt-4 pb-2">
+                <span className="text-sm font-bold uppercase tracking-wide"
+                  style={{ color: "#F5A800", fontFamily: "var(--font-heading)" }}>Jahresübersicht</span>
+              </div>
+              <div className="grid grid-cols-3 divide-x divide-white/10 pb-4">
+                {[
+                  { label: "Einnahmen p.a.", value: `${fmt(ergebnis.einnahmen * 12)} €` },
+                  { label: "Kosten p.a.",    value: `${fmt(ergebnis.ausgaben * 12)} €`  },
+                  { label: "Gewinn p.a.",    value: `${fmt(ergebnis.jahresgewinn)} €`, highlight: true },
+                ].map((item, i) => (
+                  <div key={i} className="px-4 py-4 text-center">
+                    <div className="text-xs font-bold uppercase tracking-wide mb-2 opacity-60 text-white">
+                      {item.label}
+                    </div>
+                    <div className="font-bold text-xl leading-tight"
+                      style={{ color: item.highlight ? "#F5A800" : "white" }}>
+                      {item.value}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
 
-            {/* PDF — Kundenname + Button */}
+            {/* Report */}
             <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
               <div className="text-xs font-bold uppercase tracking-wide"
-                style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
+                style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>
                 Report erstellen
               </div>
               <div className="flex flex-col gap-1">
                 <label className="text-xs text-gray-400">Kundenname (optional)</label>
                 <input
                   type="text"
-                  placeholder="z. B. Fahrrad Müller GmbH"
+                  placeholder="z. B. Radsport Schneider GmbH"
                   value={kundenName}
                   onChange={e => setKundenName(e.target.value)}
                   className="w-full border-2 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none"
@@ -846,7 +589,7 @@ export default function Calculator() {
               </div>
               <button onClick={handlePrint}
                 className="w-full py-3 rounded-2xl text-sm font-semibold flex items-center justify-center gap-2 transition-all"
-                style={{ background: "#3D5278", color: "white", fontFamily: "var(--font-body)" }}>
+                style={{ background: "#0d0d0d", color: "white", fontFamily: "var(--font-body)" }}>
                 <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                   strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="6 9 6 2 18 2 18 9"/>
@@ -860,45 +603,44 @@ export default function Calculator() {
         </div>
       )}
 
-      {/* ── Tab: Annahmen ─────────────────────────────────────────────────────── */}
+      {/* ── Tab: Annahmen ── */}
       {activeTab === "annahmen" && (
         <div className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
             <div className="bg-white rounded-2xl p-5 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-4"
-                style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>Technik & Lizenz</h2>
-              <div className="space-y-4">
-                <NumInput label="Abschreibungszeitraum" value={annahmen.abschreibungMonate}
-                  onChange={v => setA("abschreibungMonate", v)} suffix="Monate" step={6} min={12}
-                  hint="Standard: 36 Monate (linear)"/>
-                <NumInput label="Jahreslizenz" value={annahmen.lizenzMonat}
-                  onChange={v => setA("lizenzMonat", v)} suffix="€ / Monat" step={1}/>
-                <NumInput label="Ersatzfolie (Gesamtkosten)" value={annahmen.ersatzfolieGesamt}
-                  onChange={v => setA("ersatzfolieGesamt", v)} suffix="€" step={50}
-                  hint="Wird auf Abschreibungszeitraum verteilt"/>
+                style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>Session-Preise (netto)</h2>
+              <div className="space-y-2 text-sm text-gray-500">
+                {SESSION_TYPEN.map(t => (
+                  <div key={t.id} className="flex justify-between py-1.5 border-b border-gray-50">
+                    <span>{t.name} ({t.dauerMin} Min)</span>
+                    <span className="font-semibold text-gray-700">{fmt(t.preisNetto, 2)} € netto</span>
+                  </div>
+                ))}
+                <p className="text-xs text-gray-400 pt-1">
+                  Netto-Preise aus UVP zurückgerechnet (÷ 1,19).
+                </p>
               </div>
             </div>
             <div className="bg-white rounded-2xl p-5 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-4"
-                style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>Raum & Betrieb</h2>
+                style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>Raum & Betrieb</h2>
               <div className="space-y-4">
-                <NumInput label="Raumgröße Messfläche" value={annahmen.raumQm}
+                <NumInput label="Raumgröße" value={annahmen.raumQm}
                   onChange={v => setA("raumQm", v)} suffix="m²" step={1} min={5}/>
                 <NumInput label="ISCO-Kurs / Jahr" value={annahmen.iscoJahr}
-                  onChange={v => setA("iscoJahr", v)} suffix="€" step={10}
-                  hint="Tageskurs oder Online-Kurs"/>
+                  onChange={v => setA("iscoJahr", v)} suffix="€" step={10}/>
               </div>
             </div>
             <div className="bg-white rounded-2xl p-5 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-4"
-                style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>Mitarbeiter</h2>
+                style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>Mitarbeiter</h2>
               <div className="space-y-4">
-                <NumInput label="Arbeitszeit pro Termin" value={annahmen.arbeitszeitTermin}
-                  onChange={v => setA("arbeitszeitTermin", v)} suffix="Std." step={0.25} min={0.5}
-                  hint="Inkl. Terminabsprache & Kurzreport"/>
+                <NumInput label="Pufferzeit pro Session" value={annahmen.arbeitszeitPuffer}
+                  onChange={v => setA("arbeitszeitPuffer", v)} suffix="Min" step={5} min={0}
+                  hint="Admin, Vor- & Nachbereitung zusätzlich zur Session-Dauer"/>
                 <NumInput label="Lohn-Nebenkosten" value={annahmen.lohnNebenkosten}
-                  onChange={v => setA("lohnNebenkosten", v)} suffix="%" step={1}
-                  hint="Aufschlag auf Bruttogehalt"/>
+                  onChange={v => setA("lohnNebenkosten", v)} suffix="%" step={1}/>
                 <NumInput label="Vollzeit-Stunden / Monat" value={annahmen.vollzeitStunden}
                   onChange={v => setA("vollzeitStunden", v)} suffix="Std." step={1} min={100}/>
               </div>
@@ -906,166 +648,17 @@ export default function Calculator() {
           </div>
           <button onClick={() => setAnnahmen(DEFAULT_ANNAHMEN)}
             className="text-sm font-semibold px-4 py-2 rounded-xl border-2 transition-all"
-            style={{ borderColor: "#3D5278", color: "#3D5278", fontFamily: "var(--font-body)" }}>
-            Standardwerte zurücksetzen
-          </button>
-        </div>
-      )}
-
-      {/* ── Tab: Einstellungen ────────────────────────────────────────────────── */}
-      {activeTab === "einstellungen" && (
-        <div className="space-y-5">
-
-          {/* Produktkatalog Messtechnik */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <h2 className="font-bold text-sm uppercase tracking-wide mb-4"
-              style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
-              Produktkatalog Messtechnik
-            </h2>
-            <div className="space-y-2">
-              {produkte.map((p, i) => (
-                <div key={p.id} className="flex items-center gap-3 py-2 border-b border-gray-50 last:border-0">
-                  <input type="text" value={p.name}
-                    onChange={e => setProdukte(prev => prev.map((x, j) => j === i ? { ...x, name: e.target.value } : x))}
-                    className="flex-1 border-2 rounded-xl px-3 py-1.5 text-sm font-semibold focus:outline-none"
-                    style={{ borderColor: "#e5e7eb", color: "#1f2937", fontFamily: "var(--font-body)" }}/>
-                  <input type="number" value={p.preis} min={0} step={10}
-                    onChange={e => {
-                      const v = parseInt(e.target.value, 10);
-                      if (!isNaN(v) && v >= 0) {
-                        const next = produkte.map((x, j) => j === i ? { ...x, preis: v } : x);
-                        setProdukte(next);
-                        if (optionIdx !== null) {
-                          const np = getOptionPreis(optionen[optionIdx], next);
-                          setInvestition(np);
-                          setInvestitionInput(np.toLocaleString("de-DE"));
-                        }
-                      }
-                    }}
-                    className="w-28 border-2 rounded-xl px-3 py-1.5 text-right text-sm font-semibold focus:outline-none"
-                    style={{ borderColor: "#e5e7eb", color: "#1f2937", fontFamily: "var(--font-body)" }}/>
-                  <span className="text-sm text-gray-400 w-4">€</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Optionen konfigurieren */}
-          <div className="bg-white rounded-2xl p-5 shadow-sm">
-            <h2 className="font-bold text-sm uppercase tracking-wide mb-4"
-              style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
-              Optionen konfigurieren
-            </h2>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {optionen.map((opt, oi) => (
-                <div key={oi} className="rounded-xl border-2 p-4 space-y-3" style={{ borderColor: "#e5e7eb" }}>
-                  <input type="text" value={opt.name}
-                    onChange={e => setOptionen(prev => prev.map((x, j) => j === oi ? { ...x, name: e.target.value } : x))}
-                    className="w-full border-2 rounded-xl px-3 py-1.5 text-sm font-bold focus:outline-none"
-                    style={{ borderColor: "#e5e7eb", color: "#3D5278", fontFamily: "var(--font-heading)" }}/>
-                  <div className="space-y-1.5">
-                    {produkte.map(p => (
-                      <label key={p.id} className="flex items-center gap-2 text-xs text-gray-600 cursor-pointer">
-                        <input type="checkbox"
-                          checked={opt.produktIds.includes(p.id)}
-                          onChange={e => {
-                            const next = optionen.map((x, j) => j !== oi ? x : {
-                              ...x,
-                              produktIds: e.target.checked
-                                ? [...x.produktIds, p.id]
-                                : x.produktIds.filter(id => id !== p.id),
-                            });
-                            setOptionen(next);
-                            if (optionIdx === oi) {
-                              const np = getOptionPreis(next[oi], produkte);
-                              setInvestition(np);
-                              setInvestitionInput(np.toLocaleString("de-DE"));
-                            }
-                          }}
-                          style={{ accentColor: "#AADD00" }}/>
-                        <span className="flex-1 truncate">{p.name}</span>
-                        <span className="text-gray-400 shrink-0">{p.preis.toLocaleString("de-DE")} €</span>
-                      </label>
-                    ))}
-                  </div>
-                  <div className="text-xs font-bold text-right pt-2 border-t border-gray-100"
-                    style={{ color: "#3D5278" }}>
-                    Gesamt: {getOptionPreis(opt, produkte).toLocaleString("de-DE")} €
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Dienstleistungen */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            {(["d1", "d2"] as const).map(dl => {
-              const d = einstellungen[dl];
-              const umsatz = d.dlNetto + (d.sattelAnteil / 100) * (d.sattelUvp / 1.19 - d.sattelEK);
-              return (
-                <div key={dl} className="bg-white rounded-2xl p-5 shadow-sm">
-                  <h2 className="font-bold text-sm uppercase tracking-wide mb-1"
-                    style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
-                    {dl === "d1" ? "Dienstleistung 1" : "Dienstleistung 2"}
-                  </h2>
-                  <p className="text-xs text-gray-400 mb-4">
-                    Einnahmen / Termin (berechnet):{" "}
-                    <strong style={{ color: "#3D5278" }}>{fmt(umsatz, 2)} € netto</strong>
-                  </p>
-                  <div className="space-y-3">
-                    <TextInput label="Anzeigename (Mix-Slider)" value={d.name}
-                      onChange={v => setD(dl, { name: v })}/>
-                    <TextInput label="UVP-Label (Hinweistext)" value={d.uvpLabel}
-                      onChange={v => setD(dl, { uvpLabel: v })}
-                      hint={`Wird im Slider angezeigt, z. B. "99 € UVP"`}/>
-                    <NumInput label="Dienstleistungspreis (netto)" value={d.dlNetto}
-                      onChange={v => setD(dl, { dlNetto: v })} suffix="€" step={0.5} min={0}/>
-                    <div className="pt-2 border-t border-gray-100">
-                      <div className="text-xs font-bold uppercase tracking-wide mb-3"
-                        style={{ color: "#3D5278", fontFamily: "var(--font-heading)" }}>
-                        Sattelverkauf
-                      </div>
-                      <div className="space-y-3">
-                        <NumInput label="Anteil Termine mit Sattelverkauf" value={d.sattelAnteil}
-                          onChange={v => setD(dl, { sattelAnteil: Math.min(100, Math.max(0, v)) })}
-                          suffix="%" step={5} min={0}/>
-                        <NumInput label="UVP Sattel (brutto, inkl. MwSt.)" value={d.sattelUvp}
-                          onChange={v => setD(dl, { sattelUvp: v })} suffix="€" step={1} min={0}/>
-                        <NumInput label="Händler EK (netto, B2B)" value={d.sattelEK}
-                          onChange={v => setD(dl, { sattelEK: v })} suffix="€" step={1} min={0}
-                          hint={`Netto-Marge: ${fmt(d.sattelUvp / 1.19 - d.sattelEK, 2)} € (UVP ${fmt(d.sattelUvp / 1.19, 2)} € netto − EK ${fmt(d.sattelEK, 2)} €)`}/>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-
-          <button onClick={() => {
-            setEinstellungen(DEFAULT_EINSTELLUNGEN);
-            setProdukte(DEFAULT_PRODUKTE);
-            setOptionen(DEFAULT_OPTIONEN);
-            setOptionIdx(0);
-            const rp = getOptionPreis(DEFAULT_OPTIONEN[0], DEFAULT_PRODUKTE);
-            setInvestition(rp);
-            setInvestitionInput(rp.toLocaleString("de-DE"));
-          }}
-            className="text-sm font-semibold px-4 py-2 rounded-xl border-2 transition-all"
-            style={{ borderColor: "#3D5278", color: "#3D5278", fontFamily: "var(--font-body)" }}>
+            style={{ borderColor: "#0d0d0d", color: "#0d0d0d", fontFamily: "var(--font-body)" }}>
             Standardwerte zurücksetzen
           </button>
         </div>
       )}
     </div>
 
-    {/* Print Report */}
     <PrintReport
-      termine={termine} mix={mix} gehalt={gehalt} raumkosten={raumkosten}
-      investition={investition} optionName={currentOptionName} wachstum={wachstum}
-      optionModule={optionIdx !== null ? getOptionModule(optionen[optionIdx], produkte) : []}
-      ergebnis={ergebnis} annahmen={annahmen} einstellungen={einstellungen}
-      printedAt={printedAt} kundenName={kundenName} velogicLiz={velogicLiz}/>
+      mengen={mengen} paket={paket} gehalt={gehalt} raumkosten={raumkosten}
+      ergebnis={ergebnis} annahmen={annahmen}
+      kundenName={kundenName} printedAt={printedAt}/>
     </>
   );
 }
