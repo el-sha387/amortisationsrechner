@@ -281,7 +281,7 @@ function PrintReport({ mengen, paket, gehalt, raumkosten, ergebnis, annahmen,
         </div>
         <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/gebioMized-logo.png" alt="gebioMized" style={{ height: 20, objectFit: "contain" }}/>
+          <img src="/gebioMized-logo.png" alt="gebioMized" style={{ height: 20, objectFit: "contain", filter: "invert(1)" }}/>
           <span style={{ fontSize: 9, color: "#9ca3af" }}>www.gebioMized.com</span>
         </div>
       </div>
@@ -349,11 +349,8 @@ export default function Calculator() {
               </p>
             </div>
           </div>
-          <div style={{ background: "white", borderRadius: 10, padding: "5px 10px",
-            display: "flex", alignItems: "center" }}>
-            <Image src="/gebioMized-logo.png" alt="gebioMized Logo" width={100} height={36}
-              style={{ objectFit: "contain" }}/>
-          </div>
+          <Image src="/gebioMized-logo.png" alt="gebioMized Logo" width={110} height={40}
+            style={{ objectFit: "contain", filter: "invert(1)" }}/>
         </div>
         <div className="flex px-6 gap-1 pb-0">
           {tabs.map(tab => (
