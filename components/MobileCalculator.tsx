@@ -159,7 +159,7 @@ export default function MobileCalculator() {
           <div className={`flex flex-col items-center justify-center h-full text-center gap-8 ${sz.px}`}>
             <div className="space-y-4">
               <Image src="/airo-logo.png" alt="AiRO" width={isTablet ? 160 : 120} height={isTablet ? 80 : 60}
-                style={{ objectFit: "contain", margin: "0 auto", filter: "brightness(0) invert(1)" }}/>
+                style={{ objectFit: "contain", margin: "0 auto", filter: "none"}}/>
               <div>
                 <h1 className={`font-bold text-white leading-tight mt-4 ${isTablet ? "text-4xl" : "text-3xl"}`}>
                   Rentabilitäts&shy;rechner
@@ -477,14 +477,14 @@ export default function MobileCalculator() {
           // Screen 0: nur Logo, kein ProgressDots
           <div className="flex items-center justify-center h-full">
             <Image src="/airo-logo.png" alt="AiRO" width={70} height={35}
-              style={{ objectFit: "contain", filter: "brightness(0) invert(1)" }}/>
+              style={{ objectFit: "contain", filter: "none"}}/>
           </div>
         ) : (
           // Screens 1-4: Logo + Paket-Chip + ProgressDots
           <>
             <div className="flex items-center justify-between mb-3">
               <Image src="/airo-logo.png" alt="AiRO" width={70} height={35}
-                style={{ objectFit: "contain", filter: "brightness(0) invert(1)" }}/>
+                style={{ objectFit: "contain", filter: "none"}}/>
               <div className="flex items-center gap-3">
                 <span className="text-xs text-white/30">{wizardStep} / {TOTAL_SCREENS - 1}</span>
                 <div className="rounded-xl px-2 py-1 text-xs font-bold"
