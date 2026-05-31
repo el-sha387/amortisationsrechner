@@ -43,7 +43,17 @@ function berechne(mengen: Record<string, number>, paket: Paket, gehalt: number, 
   const twinsUeber       = sessionsJahr - paket.twinsJahr;
   const sparenMitPro     = paket.id === "starter" && sessionsJahr <= 50
     ? Math.max(0, sessionsJahr * (50 - 35) - (3500 - 2500)) : 0;
-  const breakEvenSessions = margeProSession > 0 ? Math.ceil(fixKosten / margeProSession) : null;
+
+  // Echter Break-even: Fixkosten / (Umsatz − Lizenz − Personal) pro Session
+  // Personalkosten skalieren proportional mit Sessions → Personal/Session = konstant
+  const avgDauerMitPuffer = sessionsMonat > 0
+    ? totalDauerMin / sessionsMonat + a.arbeitszeitPuffer
+    : SESSION_TYPEN.reduce((s,t) => s + t.dauerMin, 0) / SESSION_TYPEN.length + a.arbeitszeitPuffer;
+  const personalProSession = gehalt * (1 + a.lohnNebenkosten / 100) * (avgDauerMitPuffer / 60) / a.vollzeitStunden;
+  // Gesamtmarge/Session nach Lizenz UND Personal
+  const echteMargeProSession = umsatzProSession - effektivPaket.kostenProTwin - personalProSession;
+  const breakEvenSessions = echteMargeProSession > 0
+    ? Math.ceil(fixKosten / echteMargeProSession) : null;
   return { sessionsMonat, einnahmen, lizenzkosten, personalkosten, fixKosten,
            ausgaben, ueberschuss, umsatzProSession, margeProSession,
            sessionsJahr, twinsUeber, sparenMitPro, jahresgewinn: ueberschuss * 12,

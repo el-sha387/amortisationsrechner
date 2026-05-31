@@ -82,20 +82,27 @@ function berechne(
   const ausgaben = lizenzkosten + personalkosten + fixKosten;
   const ueberschuss = einnahmen - ausgaben;
   const umsatzProSession = sessionsMonat > 0 ? einnahmen / sessionsMonat : 0;
-  const margeProSession = umsatzProSession - paket.kostenProTwin;
-  const sessionsJahr = sessionsMonat * 12;
+  const margeProSession  = umsatzProSession - paket.kostenProTwin;
+  const sessionsJahr     = sessionsMonat * 12;
   const twinsUeberschuss = sessionsJahr - paket.twinsJahr;
-  const sparenMitPro = paket.id === "starter"
-    ? Math.max(0,
-        sessionsJahr * (PAKETE[0].kostenProTwin - PAKETE[1].kostenProTwin)
-        - (PAKETE[1].jahreslizenz - PAKETE[0].jahreslizenz)
-      )
-    : 0;
+  const sparenMitPro     = paket.id === "starter"
+    ? Math.max(0, sessionsJahr * (PAKETE[0].kostenProTwin - PAKETE[1].kostenProTwin)
+        - (PAKETE[1].jahreslizenz - PAKETE[0].jahreslizenz)) : 0;
   const jahresgewinn = ueberschuss * 12;
+
+  // Echter Break-even: Fixkosten / (Umsatz − Lizenz − Personal) pro Session
+  const avgDauerMitPuffer = sessionsMonat > 0
+    ? totalDauerMin / sessionsMonat + a.arbeitszeitPuffer
+    : SESSION_TYPEN.reduce((s, t) => s + t.dauerMin, 0) / SESSION_TYPEN.length + a.arbeitszeitPuffer;
+  const personalProSession   = gehalt * (1 + a.lohnNebenkosten / 100) * (avgDauerMitPuffer / 60) / a.vollzeitStunden;
+  const echteMargeProSession = umsatzProSession - paket.kostenProTwin - personalProSession;
+  const breakEvenSessions    = echteMargeProSession > 0
+    ? Math.ceil(fixKosten / echteMargeProSession) : null;
 
   return { sessionsMonat, einnahmen, lizenzkosten, personalkosten, fixKosten,
            ausgaben, ueberschuss, umsatzProSession, margeProSession,
-           sessionsJahr, twinsUeberschuss, sparenMitPro, jahresgewinn };
+           sessionsJahr, twinsUeberschuss, sparenMitPro, jahresgewinn,
+           breakEvenSessions, echteMargeProSession };
 }
 
 function fmt(val: number, digits = 0) {
@@ -514,6 +521,11 @@ export default function Calculator() {
                 label="Ø Marge / Session"
                 value={`${fmt(ergebnis.margeProSession, 2)} €`}
                 sub={`nach ${paket.kostenProTwin} € Lizenz/Twin`}
+                accent="#0d0d0d"/>
+              <MetricCard
+                label="Break-even"
+                value={ergebnis.breakEvenSessions !== null ? `${ergebnis.breakEvenSessions} Sessions / Mo.` : "–"}
+                sub="Kostendeckung inkl. Personal"
                 accent="#0d0d0d"/>
             </div>
 
