@@ -56,7 +56,7 @@ const DEFAULT_ANNAHMEN: Annahmen = {
 };
 
 const DEFAULT_MENGEN: Record<string, number> = {
-  helm: 4, addon: 8, aero: 4, windkanal: 2,
+  helm: 2, addon: 2, aero: 2, windkanal: 2,
 };
 
 // ─── Berechnung ───────────────────────────────────────────────────────────────
