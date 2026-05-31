@@ -225,12 +225,30 @@ async function generateAndSharePDF(
   });
   y+=29;
 
-  // ── Footer ────────────────────────────────────────────────────────────────
-  doc.setFillColor(...GOLD_RGB); doc.rect(0,y,W,1,"F");
+  // ── QR Code + Footer ──────────────────────────────────────────────────────
+  const shopUrl = paket.id === "pro"
+    ? "https://gebiomized.de/B2B/AiRO.app-Twin-Paket-PRO-100-digital-twins/803459"
+    : "https://gebiomized.de/B2B/AiRO.app-Twin-Paket-Starter-50-digital-twins/803458";
+
+  // QR Code generieren
+  const qrSize = 28;
+  try {
+    const QRCode = await import("qrcode");
+    const qrDataUrl = await QRCode.toDataURL(shopUrl, { width: 200, margin: 1, color: { dark: "#0d0d0d", light: "#ffffff" } });
+    doc.addImage(qrDataUrl, "PNG", W-M-qrSize, y, qrSize, qrSize);
+    // Label unter QR
+    doc.setFontSize(6); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
+    doc.text(lang==="de"?"Jetzt bestellen":"Order now", W-M-qrSize/2, y+qrSize+3.5, {align:"center"});
+  } catch { /* QR nicht verfügbar */ }
+
+  // Trennlinie
+  doc.setFillColor(...GOLD_RGB); doc.rect(0,y,W-M-qrSize-4,1,"F");
   y+=5;
   doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
   doc.text(t.pdfHinweis, M, y);
-  doc.text("gebioMized.com", W-M, y, {align:"right"});
+  y+=5;
+  doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(...BLACK_RGB);
+  doc.text("www.gebiomized.de", M, y);
 
   const safeName = kundenName.replace(/[^a-zA-Z0-9äöüÄÖÜß\s]/g,"").trim()||"Studio";
   const fileName = `AIRO_gebioMized_Rentabilitaet_fuer_${safeName}.pdf`;
