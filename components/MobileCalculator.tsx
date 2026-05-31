@@ -156,48 +156,46 @@ async function generateAndSharePDF(
   });
   y+=31;
 
-  // ── 3. Zwei-Spalten: Kosten | Ergebnis ────────────────────────────────────
+  // ── 3. Zwei-Spalten: Kosten | Ergebnis (getrennte Y-Vars) ────────────────
   const halfW = CW/2-3;
-  const col2 = M+halfW+6;
+  const col2  = M+halfW+6;
+  const rowH  = 7.5;
 
-  function sectionBadge(title: string, x: number, w: number) {
-    doc.setFillColor(...GOLD_RGB); doc.roundedRect(x,y,w,7,2,2,"F");
+  function drawBadge(title: string, x: number, w: number, yy: number): number {
+    doc.setFillColor(...GOLD_RGB); doc.roundedRect(x,yy,w,7,2,2,"F");
     doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.setTextColor(...BLACK_RGB);
-    doc.text(title.toUpperCase(), x+4, y+5);
-    y+=11;
+    doc.text(title.toUpperCase(), x+4, yy+5);
+    return yy+11;
   }
-  function highlightRow(label: string, value: string, xStart: number, w: number, isGold=false, isHeader=false) {
-    const rowH = 7.5;
-    if (isHeader) { doc.setFillColor(245,245,245); doc.rect(xStart,y-1,w,rowH+1,"F"); }
+  function drawRow(label: string, value: string, x: number, w: number, yy: number, isGold=false, isHeader=false): number {
+    if (isHeader) { doc.setFillColor(245,245,245); doc.rect(x,yy-1,w,rowH+1,"F"); }
     doc.setFontSize(8.5); doc.setFont("helvetica", isHeader?"bold":"normal");
-    doc.setTextColor(...(isHeader?BLACK_RGB:GRAY_RGB)); doc.text(label, xStart+3, y+5);
+    doc.setTextColor(...(isHeader?BLACK_RGB:GRAY_RGB));
+    doc.text(label, x+3, yy+5);
     if (isGold) { doc.setTextColor(...GOLD_RGB); } else { doc.setTextColor(...BLACK_RGB); }
     doc.setFont("helvetica","bold");
-    doc.text(value, xStart+w-3, y+5, {align:"right"});
-    doc.setDrawColor(235,235,235); doc.setLineWidth(0.15); doc.line(xStart,y+rowH,xStart+w,y+rowH);
-    y+=rowH;
+    doc.text(value, x+w-3, yy+5, {align:"right"});
+    doc.setDrawColor(235,235,235); doc.setLineWidth(0.15); doc.line(x,yy+rowH,x+w,yy+rowH);
+    return yy+rowH;
   }
 
-  const yBeforeTable = y;
+  // Linke Spalte unabhängig
+  let yL = y;
+  yL = drawBadge(t.pdfKosten, M, halfW, yL);
+  yL = drawRow(t.airoLizenz(ergebnis.sessionsMonat, ergebnis.effektivPaket.kostenProTwin), `${fmt(ergebnis.lizenzkosten)} €`, M, halfW, yL, true);
+  yL = drawRow(t.personal,   `${fmt(ergebnis.personalkosten)} €`,          M, halfW, yL);
+  yL = drawRow(t.raumkosten, `${fmt(raumkosten*annahmen.raumQm)} €`,       M, halfW, yL);
+  yL = drawRow(t.isco,       `${fmt(annahmen.iscoJahr/12)} €`,             M, halfW, yL);
+  yL = drawRow(lang==="de"?"Gesamt":"Total", `${fmt(ergebnis.ausgaben)} €`, M, halfW, yL, false, true);
 
-  // Linke Spalte: Kosten
-  sectionBadge(t.pdfKosten, M, halfW);
-  highlightRow(t.airoLizenz(ergebnis.sessionsMonat, ergebnis.effektivPaket.kostenProTwin), `${fmt(ergebnis.lizenzkosten)} €`, M, halfW, true);
-  y-=7.5; // reset for parallel
-  const yAfterLizenz = y+7.5;
-  highlightRow(t.personal,   `${fmt(ergebnis.personalkosten)} €`, M, halfW);
-  highlightRow(t.raumkosten, `${fmt(raumkosten*annahmen.raumQm)} €`, M, halfW);
-  highlightRow(t.isco,       `${fmt(annahmen.iscoJahr/12)} €`, M, halfW);
-  highlightRow(lang==="de"?"Gesamt":"Total", `${fmt(ergebnis.ausgaben)} €`, M, halfW, false, true);
-  const yLeftEnd = y;
+  // Rechte Spalte unabhängig (startet auf gleicher Y wie links)
+  let yR = y;
+  yR = drawBadge(t.pdfErgebnis, col2, halfW, yR);
+  yR = drawRow(lang==="de"?"Einnahmen / Mo.":"Revenue / mo.",  `${fmt(ergebnis.einnahmen)} €`,   col2, halfW, yR);
+  yR = drawRow(lang==="de"?"Kosten / Mo.":"Costs / mo.",       `${fmt(ergebnis.ausgaben)} €`,    col2, halfW, yR);
+  yR = drawRow(lang==="de"?"Überschuss / Mo.":"Surplus / mo.", `${fmt(ergebnis.ueberschuss)} €`, col2, halfW, yR, ergebnis.ueberschuss>0, true);
 
-  // Rechte Spalte: Ergebnis (parallel zur linken)
-  y = yBeforeTable;
-  sectionBadge(t.pdfErgebnis, col2, halfW);
-  highlightRow(lang==="de"?"Einnahmen / Mo.":"Revenue / mo.", `${fmt(ergebnis.einnahmen)} €`, col2, halfW);
-  highlightRow(lang==="de"?"Kosten / Mo.":"Costs / mo.", `${fmt(ergebnis.ausgaben)} €`, col2, halfW);
-  highlightRow(lang==="de"?"Überschuss / Mo.":"Surplus / mo.", `${fmt(ergebnis.ueberschuss)} €`, col2, halfW, ergebnis.ueberschuss>0, true);
-  y = Math.max(y, yLeftEnd)+6;
+  y = Math.max(yL, yR)+6;
 
   // ── 4. Jahresübersicht Highlight-Cards ────────────────────────────────────
   const jData = [
