@@ -68,24 +68,45 @@ async function generateAndSharePDF(
   const W = 210; const M = 18; const CW = W - M * 2;
   let y = M;
 
+  // ── Gold-Header (nur AiRO + Titel) ──
   doc.setFillColor(...GOLD_RGB); doc.rect(0,0,W,22,"F");
   doc.setFont("helvetica","bold"); doc.setFontSize(14); doc.setTextColor(...BLACK_RGB);
   doc.text("AiRO", M, 14);
   doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(60,60,60);
   doc.text(t.pdfTitel, M+14, 14);
-  doc.setTextColor(...GRAY_RGB); doc.text(t.pdfFirma, W-M, 14, { align:"right" });
-  y = 30;
+  y = 26;
 
+  // ── Logo rechts oben ──
+  const logoW = 38; const logoH = 13; const logoX = W-M-logoW; const logoY = y+1;
+  try {
+    const logoImg = new window.Image();
+    logoImg.crossOrigin = "anonymous";
+    await new Promise<void>((res,rej) => { logoImg.onload=()=>res(); logoImg.onerror=()=>rej(); logoImg.src="/gebioMized-logo.png"; });
+    const cv = document.createElement("canvas");
+    cv.width=logoImg.naturalWidth; cv.height=logoImg.naturalHeight;
+    cv.getContext("2d")!.drawImage(logoImg,0,0);
+    doc.addImage(cv.toDataURL("image/png"),"PNG",logoX,logoY,logoW,logoH);
+  } catch { /* Logo nicht ladbar */ }
+
+  // ── Adresse unter dem Logo ──
+  const adresse = ["SnM gebioMized GmbH","Wilhelm-Schickard-Str. 12, 48149 Münster","www.gebiomized.de · info@gebiomized.de"];
+  doc.setFontSize(7.5); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
+  adresse.forEach((line,i) => doc.text(line, W-M, logoY+logoH+3+i*4.5, {align:"right"}));
+
+  // ── Kundenname + Datum links ──
+  const adresseBottom = logoY+logoH+3+adresse.length*4.5+3;
   if (kundenName) {
-    doc.setFontSize(13); doc.setFont("helvetica","bold"); doc.setTextColor(...BLACK_RGB);
-    doc.text(kundenName, M, y);
-    doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
-    doc.text(t.pdfUntertitel, M, y+5); y += 14;
+    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...BLACK_RGB);
+    doc.text(kundenName, M, y+6);
+    doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
+    doc.text(t.pdfUntertitel, M, y+13);
   }
   const now = new Date();
   const dateStr = now.toLocaleDateString(lang==="de"?"de-DE":"en-GB", {day:"2-digit",month:"long",year:"numeric"});
-  doc.setFontSize(8); doc.setTextColor(...GRAY_RGB);
-  doc.text(`${t.pdfDatum}: ${dateStr}`, W-M, kundenName ? y-5 : y, {align:"right"});
+  doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
+  doc.text(`${t.pdfDatum}: ${dateStr}`, M, kundenName ? y+20 : y+6);
+
+  y = adresseBottom;
   doc.setDrawColor(...GOLD_RGB); doc.setLineWidth(0.5); doc.line(M,y,W-M,y); y+=8;
 
   doc.setFillColor(...BLACK_RGB); doc.roundedRect(M,y,CW,28,3,3,"F");
