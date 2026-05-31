@@ -331,7 +331,7 @@ export default function MobileCalculator() {
             <span className="text-white/30 text-xs">powered by</span>
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img src="/gebioMized-logo.png" alt="gebioMized"
-              style={{height:22,objectFit:"contain",filter:"invert(1) grayscale(1) brightness(2)",opacity:0.6}}/>
+              style={{height:33,objectFit:"contain",filter:"invert(1) grayscale(1) brightness(2)",opacity:0.6}}/>
           </div>
         </div>
       );
