@@ -107,77 +107,122 @@ async function generateAndSharePDF(
   doc.text(`${t.pdfDatum}: ${dateStr}`, M, kundenName ? y+20 : y+6);
 
   y = adresseBottom;
-  doc.setDrawColor(...GOLD_RGB); doc.setLineWidth(0.5); doc.line(M,y,W-M,y); y+=8;
+  doc.setDrawColor(...GOLD_RGB); doc.setLineWidth(0.8); doc.line(M,y,W-M,y); y+=8;
 
-  doc.setFillColor(...BLACK_RGB); doc.roundedRect(M,y,CW,28,3,3,"F");
-  doc.setTextColor(...GOLD_RGB); doc.setFont("helvetica","bold"); doc.setFontSize(9);
-  doc.text(t.jahresgewinn.toUpperCase(), M+6, y+8);
-  doc.setFontSize(24); doc.text(`${fmt(ergebnis.jahresgewinn)} €`, M+6, y+21);
-  doc.setFontSize(9); doc.setFont("helvetica","normal"); doc.setTextColor(200,200,200);
-  doc.text(`${fmt(ergebnis.ueberschuss)} € / ${lang==="de"?"Monat":"month"} · ${ergebnis.sessionsMonat} Sessions`, W-M-6, y+21, {align:"right"});
-  y+=36;
+  // ── 1. Jahresgewinn Highlight ──────────────────────────────────────────────
+  const positiv = ergebnis.jahresgewinn >= 0;
+  doc.setFillColor(...BLACK_RGB); doc.roundedRect(M,y,CW,32,4,4,"F");
+  // Gold accent bar links
+  doc.setFillColor(...GOLD_RGB); doc.roundedRect(M,y,3,32,2,2,"F");
+  doc.setTextColor(...GOLD_RGB); doc.setFont("helvetica","bold"); doc.setFontSize(8);
+  doc.text(t.jahresgewinn.toUpperCase(), M+8, y+9);
+  doc.setFontSize(28); doc.text(`${positiv?"":"-"}${fmt(Math.abs(ergebnis.jahresgewinn))} €`, M+8, y+25);
+  doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(180,180,180);
+  doc.text(`= ${fmt(Math.abs(ergebnis.ueberschuss))} € / ${lang==="de"?"Monat":"month"}`, W-M-4, y+14, {align:"right"});
+  doc.text(`${ergebnis.sessionsMonat} Sessions / ${lang==="de"?"Monat":"month"} · Paket ${ergebnis.effektivPaket.name}`, W-M-4, y+21, {align:"right"});
+  y+=40;
 
+  // ── 2. KPI Highlight-Boxen (3 Cards mit Gold-Akzent) ─────────────────────
   const col = CW/3-3;
   const cols3 = [M, M+col+4.5, M+(col+4.5)*2];
-  const metrikDaten = [
-    { title: t.margeSession,    val: `${fmt(ergebnis.margeProSession,0)} €`, sub: t.nachLizenz },
-    { title: t.kostenGedecktAb, val: ergebnis.breakEvenSessions!==null?`${ergebnis.breakEvenSessions} / Mo.`:"—", sub: t.breakEven },
-    { title: t.lizenzKostet,    val: `${ergebnis.effektivPaket.kostenProTwin} €`, sub: t.proTwin },
+  const kpiData = [
+    { label: t.margeSession,    val: `${fmt(ergebnis.margeProSession,0)} €`, sub: t.nachLizenz,   accent: true  },
+    { label: t.kostenGedecktAb, val: ergebnis.breakEvenSessions!==null?`${ergebnis.breakEvenSessions} / Mo.`:"—", sub: t.breakEven, accent: false },
+    { label: t.lizenzKostet,    val: `${ergebnis.effektivPaket.kostenProTwin} €`, sub: t.proTwin, accent: false },
   ];
-  metrikDaten.forEach((m,i) => {
-    doc.setFillColor(245,245,245); doc.roundedRect(cols3[i],y,col,22,2,2,"F");
-    doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
-    doc.text(m.title.toUpperCase(), cols3[i]+4, y+6);
-    doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...BLACK_RGB);
-    doc.text(m.val, cols3[i]+4, y+14);
-    doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
-    doc.text(m.sub, cols3[i]+4, y+19);
+  kpiData.forEach((k,i) => {
+    // Card background
+    doc.setFillColor(248,248,248); doc.roundedRect(cols3[i],y,col,24,3,3,"F");
+    // Gold left accent bar
+    if (k.accent) { doc.setFillColor(...GOLD_RGB); doc.roundedRect(cols3[i],y,3,24,2,2,"F"); }
+    else { doc.setFillColor(220,220,220); doc.roundedRect(cols3[i],y,3,24,2,2,"F"); }
+    doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
+    doc.text(k.label.toUpperCase(), cols3[i]+6, y+7);
+    doc.setFontSize(13); doc.setFont("helvetica","bold");
+    if (k.accent) { doc.setTextColor(...GOLD_RGB); } else { doc.setTextColor(...BLACK_RGB); }
+    doc.text(k.val, cols3[i]+6, y+17);
+    doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
+    doc.text(k.sub, cols3[i]+6, y+22);
   });
-  y+=28;
+  y+=31;
 
-  function sectionTitle(title: string) {
-    doc.setFontSize(8); doc.setFont("helvetica","bold"); doc.setTextColor(...GOLD_RGB);
-    doc.text(title.toUpperCase(), M, y);
-    doc.setDrawColor(220,220,220); doc.setLineWidth(0.2); doc.line(M,y+1,W-M,y+1); y+=6;
+  // ── 3. Zwei-Spalten: Kosten | Ergebnis ────────────────────────────────────
+  const halfW = CW/2-3;
+  const col2 = M+halfW+6;
+
+  function sectionBadge(title: string, x: number, w: number) {
+    doc.setFillColor(...GOLD_RGB); doc.roundedRect(x,y,w,7,2,2,"F");
+    doc.setFontSize(7); doc.setFont("helvetica","bold"); doc.setTextColor(...BLACK_RGB);
+    doc.text(title.toUpperCase(), x+4, y+5);
+    y+=11;
   }
-  function tableRow(label: string, value: string, bold=false, goldVal=false) {
-    doc.setFontSize(9); doc.setFont("helvetica", bold?"bold":"normal");
-    doc.setTextColor(...(bold?BLACK_RGB:GRAY_RGB)); doc.text(label,M,y);
-    if (goldVal) { doc.setTextColor(...GOLD_RGB); } else { doc.setTextColor(...BLACK_RGB); }
-    doc.setFont("helvetica", bold?"bold":"normal");
-    doc.text(value, W-M, y, {align:"right"});
-    doc.setDrawColor(235,235,235); doc.setLineWidth(0.1); doc.line(M,y+1.5,W-M,y+1.5); y+=7;
+  function highlightRow(label: string, value: string, xStart: number, w: number, isGold=false, isHeader=false) {
+    const rowH = 7.5;
+    if (isHeader) { doc.setFillColor(245,245,245); doc.rect(xStart,y-1,w,rowH+1,"F"); }
+    doc.setFontSize(8.5); doc.setFont("helvetica", isHeader?"bold":"normal");
+    doc.setTextColor(...(isHeader?BLACK_RGB:GRAY_RGB)); doc.text(label, xStart+3, y+5);
+    if (isGold) { doc.setTextColor(...GOLD_RGB); } else { doc.setTextColor(...BLACK_RGB); }
+    doc.setFont("helvetica","bold");
+    doc.text(value, xStart+w-3, y+5, {align:"right"});
+    doc.setDrawColor(235,235,235); doc.setLineWidth(0.15); doc.line(xStart,y+rowH,xStart+w,y+rowH);
+    y+=rowH;
   }
 
-  sectionTitle(t.pdfKosten);
-  tableRow(t.airoLizenz(ergebnis.sessionsMonat, ergebnis.effektivPaket.kostenProTwin), `${fmt(ergebnis.lizenzkosten)} €`, false, true);
-  tableRow(t.personal, `${fmt(ergebnis.personalkosten)} €`);
-  tableRow(t.raumkosten, `${fmt(raumkosten*annahmen.raumQm)} €`);
-  tableRow(t.isco, `${fmt(annahmen.iscoJahr/12)} €`);
-  tableRow(lang==="de"?"Gesamt Kosten":"Total costs", `${fmt(ergebnis.ausgaben)} €`, true);
-  y+=2;
-  sectionTitle(t.pdfErgebnis);
-  tableRow(lang==="de"?"Einnahmen / Monat":"Revenue / month", `${fmt(ergebnis.einnahmen)} €`);
-  tableRow(lang==="de"?"Überschuss / Monat":"Surplus / month", `${fmt(ergebnis.ueberschuss)} €`, true, ergebnis.ueberschuss>0);
-  tableRow(t.jahresgewinn, `${fmt(ergebnis.jahresgewinn)} €`, true, ergebnis.jahresgewinn>0);
-  y+=2;
-  sectionTitle(lang==="de"?"Jahresübersicht":"Annual Overview");
-  const jLabels=[t.einnahmenJahr,t.kostenJahr,t.gewinnJahr];
-  const jVals=[`${fmt(ergebnis.einnahmen*12)} €`,`${fmt(ergebnis.ausgaben*12)} €`,`${fmt(ergebnis.jahresgewinn)} €`];
-  cols3.forEach((x,i) => {
-    if (i===2) { doc.setFillColor(...BLACK_RGB); } else { doc.setFillColor(245,245,245); }
-    doc.roundedRect(x,y,CW/3-3,18,2,2,"F");
-    doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
-    doc.text(jLabels[i].toUpperCase(), x+3, y+6);
-    doc.setFontSize(11); doc.setFont("helvetica","bold");
-    if (i===2) { doc.setTextColor(...GOLD_RGB); } else { doc.setTextColor(...BLACK_RGB); }
-    doc.text(jVals[i], x+3, y+14);
+  const yBeforeTable = y;
+
+  // Linke Spalte: Kosten
+  sectionBadge(t.pdfKosten, M, halfW);
+  highlightRow(t.airoLizenz(ergebnis.sessionsMonat, ergebnis.effektivPaket.kostenProTwin), `${fmt(ergebnis.lizenzkosten)} €`, M, halfW, true);
+  y-=7.5; // reset for parallel
+  const yAfterLizenz = y+7.5;
+  highlightRow(t.personal,   `${fmt(ergebnis.personalkosten)} €`, M, halfW);
+  highlightRow(t.raumkosten, `${fmt(raumkosten*annahmen.raumQm)} €`, M, halfW);
+  highlightRow(t.isco,       `${fmt(annahmen.iscoJahr/12)} €`, M, halfW);
+  highlightRow(lang==="de"?"Gesamt":"Total", `${fmt(ergebnis.ausgaben)} €`, M, halfW, false, true);
+  const yLeftEnd = y;
+
+  // Rechte Spalte: Ergebnis (parallel zur linken)
+  y = yBeforeTable;
+  sectionBadge(t.pdfErgebnis, col2, halfW);
+  highlightRow(lang==="de"?"Einnahmen / Mo.":"Revenue / mo.", `${fmt(ergebnis.einnahmen)} €`, col2, halfW);
+  highlightRow(lang==="de"?"Kosten / Mo.":"Costs / mo.", `${fmt(ergebnis.ausgaben)} €`, col2, halfW);
+  highlightRow(lang==="de"?"Überschuss / Mo.":"Surplus / mo.", `${fmt(ergebnis.ueberschuss)} €`, col2, halfW, ergebnis.ueberschuss>0, true);
+  y = Math.max(y, yLeftEnd)+6;
+
+  // ── 4. Jahresübersicht Highlight-Cards ────────────────────────────────────
+  const jData = [
+    { label: t.einnahmenJahr, val: `${fmt(ergebnis.einnahmen*12)} €`, dark: false },
+    { label: t.kostenJahr,    val: `${fmt(ergebnis.ausgaben*12)} €`,  dark: false },
+    { label: t.gewinnJahr,    val: `${fmt(ergebnis.jahresgewinn)} €`, dark: true  },
+  ];
+  jData.forEach((j,i) => {
+    const cx = cols3[i];
+    if (j.dark) {
+      doc.setFillColor(...BLACK_RGB); doc.roundedRect(cx,y,col,22,3,3,"F");
+      doc.setFillColor(...GOLD_RGB); doc.roundedRect(cx,y,col,4,2,2,"F"); // gold top bar
+      doc.setFillColor(...BLACK_RGB); doc.rect(cx,y+2,col,2,"F"); // fix bottom half of top bar
+      doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(...GOLD_RGB);
+      doc.text(j.label.toUpperCase(), cx+4, y+9);
+      doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...GOLD_RGB);
+      doc.text(j.val, cx+4, y+18);
+    } else {
+      doc.setFillColor(248,248,248); doc.roundedRect(cx,y,col,22,3,3,"F");
+      doc.setFillColor(220,220,220); doc.roundedRect(cx,y,col,3,2,2,"F"); // gray top bar
+      doc.setFillColor(248,248,248); doc.rect(cx,y+1.5,col,1.5,"F");
+      doc.setFontSize(6.5); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
+      doc.text(j.label.toUpperCase(), cx+4, y+9);
+      doc.setFontSize(12); doc.setFont("helvetica","bold"); doc.setTextColor(...BLACK_RGB);
+      doc.text(j.val, cx+4, y+18);
+    }
   });
-  y+=24;
+  y+=29;
 
-  doc.setDrawColor(...GOLD_RGB); doc.setLineWidth(0.3); doc.line(M,y,W-M,y); y+=4;
+  // ── Footer ────────────────────────────────────────────────────────────────
+  doc.setFillColor(...GOLD_RGB); doc.rect(0,y,W,1,"F");
+  y+=5;
   doc.setFontSize(7); doc.setFont("helvetica","normal"); doc.setTextColor(...GRAY_RGB);
-  doc.text(t.pdfHinweis, M, y); doc.text("gebioMized.com", W-M, y, {align:"right"});
+  doc.text(t.pdfHinweis, M, y);
+  doc.text("gebioMized.com", W-M, y, {align:"right"});
 
   const safeName = kundenName.replace(/[^a-zA-Z0-9äöüÄÖÜß\s]/g,"").trim()||"Studio";
   const fileName = `AIRO_gebioMized_Rentabilitaet_fuer_${safeName}.pdf`;
