@@ -226,9 +226,13 @@ async function generateAndSharePDF(
   y+=29;
 
   // ── QR Code + Footer ──────────────────────────────────────────────────────
-  const shopUrl = paket.id === "pro"
-    ? "https://gebiomized.de/B2B/AiRO.app-Twin-Paket-PRO-100-digital-twins/803459"
-    : "https://gebiomized.de/B2B/AiRO.app-Twin-Paket-Starter-50-digital-twins/803458";
+  const shopUrl = lang === "en"
+    ? (paket.id === "pro"
+        ? "https://gebiomized.de/B2B/EN/AiRO.app-Twin-Package-pro-package-100-digital-twins/803459"
+        : "https://gebiomized.de/B2B/EN/AiRO.app-Twin-Package-starter-package-50-digital-twins/803458")
+    : (paket.id === "pro"
+        ? "https://gebiomized.de/B2B/AiRO.app-Twin-Paket-PRO-100-digital-twins/803459"
+        : "https://gebiomized.de/B2B/AiRO.app-Twin-Paket-Starter-50-digital-twins/803458");
 
   // QR Code generieren
   const qrSize = 28;
@@ -248,7 +252,7 @@ async function generateAndSharePDF(
   doc.text(t.pdfHinweis, M, y);
   y+=5;
   doc.setFontSize(7.5); doc.setFont("helvetica","bold"); doc.setTextColor(...BLACK_RGB);
-  doc.text("www.gebiomized.de", M, y);
+  doc.text("gebiomized.de", M, y);
 
   const safeName = kundenName.replace(/[^a-zA-Z0-9äöüÄÖÜß\s]/g,"").trim()||"Studio";
   const fileName = `AIRO_gebioMized_Rentabilitaet_fuer_${safeName}.pdf`;
