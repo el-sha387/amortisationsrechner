@@ -33,7 +33,7 @@ const DEFAULT_ANNAHMEN: Annahmen = {
   raumQm: 10, iscoJahr: 348, arbeitszeitPuffer: 15,
   lohnNebenkosten: 20, vollzeitStunden: 172,
 };
-const DEFAULT_MENGEN: Record<string, number> = { helm: 4, addon: 8, aero: 4, windkanal: 2 };
+const DEFAULT_MENGEN: Record<string, number> = { helm: 2, addon: 2, aero: 2, windkanal: 2 };
 
 const GOLD  = "#F5A800";
 const BLACK = "#0d0d0d";
