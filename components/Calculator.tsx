@@ -350,7 +350,7 @@ export default function Calculator() {
             </div>
           </div>
           {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/gebioMized-logo.png" alt="gebioMized" style={{ height: 26, objectFit: "contain", filter: "invert(1) grayscale(1) brightness(2)" }}/>
+          <img src="/gebioMized-logo.png" alt="gebioMized" style={{ height: 32, objectFit: "contain", filter: "invert(1) grayscale(1) brightness(2)" }}/>
         </div>
         <div className="flex px-6 gap-1 pb-0">
           {tabs.map(tab => (
