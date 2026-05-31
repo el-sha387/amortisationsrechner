@@ -301,10 +301,10 @@ function PrintReport({ mengen, paket, gehalt, raumkosten, ergebnis, annahmen,
 
 export default function Calculator() {
   const [activeTab, setActiveTab] = useState<"rechner" | "annahmen">("rechner");
-  const [paketId, setPaketId] = useState<"starter" | "pro">("starter");
+  const [paketId, setPaketId] = useState<"starter" | "pro">("pro");
   const [mengen, setMengen] = useState<Record<string, number>>(DEFAULT_MENGEN);
-  const [gehalt, setGehalt] = useState(2600);
-  const [raumkosten, setRaumkosten] = useState(14);
+  const [gehalt, setGehalt] = useState(3000);
+  const [raumkosten, setRaumkosten] = useState(15);
   const [annahmen, setAnnahmen] = useState<Annahmen>(DEFAULT_ANNAHMEN);
   const [kundenName, setKundenName] = useState("");
   const [printedAt, setPrintedAt] = useState(() => new Date());
