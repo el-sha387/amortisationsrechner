@@ -349,8 +349,10 @@ export default function Calculator() {
               </p>
             </div>
           </div>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/gebioMized-logo.png" alt="gebioMized" style={{ height: 28, objectFit: "contain", filter: "brightness(0) invert(1)" }}/>
+          <div style={{ background: "white", borderRadius: 8, padding: "5px 10px", display: "flex", alignItems: "center" }}>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/gebioMized-logo.png" alt="gebioMized" style={{ height: 22, objectFit: "contain" }}/>
+          </div>
         </div>
         <div className="flex px-6 gap-1 pb-0">
           {tabs.map(tab => (
