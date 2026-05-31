@@ -349,9 +349,8 @@ export default function Calculator() {
               </p>
             </div>
           </div>
-          <span className="text-xs font-semibold" style={{ color: "rgba(255,255,255,0.35)", letterSpacing: 1 }}>
-            powered by <span style={{ color: "rgba(255,255,255,0.65)" }}>gebioMized</span>
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src="/gebioMized-logo.png" alt="gebioMized" style={{ height: 28, objectFit: "contain", filter: "brightness(0) invert(1)" }}/>
         </div>
         <div className="flex px-6 gap-1 pb-0">
           {tabs.map(tab => (
