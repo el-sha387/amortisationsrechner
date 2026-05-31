@@ -488,7 +488,7 @@ export default function MobileCalculator() {
       )}
 
       {/* Content */}
-      <div className="flex-1 overflow-y-auto">{renderContent()}</div>
+      <div className="flex-1 overflow-y-auto" style={{background:BLACK}}>{renderContent()}</div>
 
       {/* Footer */}
       <div className={`flex-none ${px} pb-6 pt-3 flex gap-3`}

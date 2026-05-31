@@ -1,4 +1,4 @@
-﻿import MobileCalculator from "@/components/MobileCalculator";
+import MobileCalculator from "@/components/MobileCalculator";
 
 export const metadata = {
   title: "AiRO Rentabilitaetsrechner",
@@ -6,5 +6,9 @@ export const metadata = {
 };
 
 export default function MobilePage() {
-  return <MobileCalculator />;
+  return (
+    <div style={{ background: "#0d0d0d", minHeight: "100dvh" }}>
+      <MobileCalculator />
+    </div>
+  );
 }
