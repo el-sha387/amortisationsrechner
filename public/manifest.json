@@ -1,11 +1,11 @@
 {
-  "name": "Rentabilitätsrechner – gebioMized",
-  "short_name": "gebioMized",
-  "description": "Bikefitting Amortisationsrechner",
+  "name": "AiRO Rentabilitätsrechner",
+  "short_name": "AiRO",
+  "description": "AiRO ROI-Rechner – gebioMized",
   "start_url": "/mobile",
   "display": "standalone",
-  "background_color": "#3D5278",
-  "theme_color": "#3D5278",
+  "background_color": "#0d0d0d",
+  "theme_color": "#0d0d0d",
   "orientation": "portrait",
   "icons": [
     {

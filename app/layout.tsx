@@ -2,8 +2,8 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "Rentabilitätsrechner – gebioMized",
-  description: "Berechne die Amortisation deiner Bikefitting-Investition",
+  title: "AiRO Rentabilitätsrechner",
+  description: "Berechne den ROI deiner AiRO-Investition",
   manifest: "/manifest.json",
   icons: {
     icon: [
@@ -23,10 +23,10 @@ export default function RootLayout({
   return (
     <html lang="de" className="h-full">
       <head>
-        <meta name="theme-color" content="#3D5278" />
+        <meta name="theme-color" content="#0d0d0d" />
         <meta name="apple-mobile-web-app-capable" content="yes" />
         <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
-        <meta name="apple-mobile-web-app-title" content="gebioMized" />
+        <meta name="apple-mobile-web-app-title" content="AiRO" />
       </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
