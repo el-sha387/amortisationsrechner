@@ -456,12 +456,6 @@ export default function MobileCalculator() {
               ))}
             </div>
 
-            {/* 4. CTA */}
-            <button onClick={() => setScreen(0)}
-              className={`w-full rounded-2xl border font-semibold ${sz.btn}`}
-              style={{ borderColor: "rgba(255,255,255,0.15)", color: "rgba(255,255,255,0.5)" }}>
-              Neue Berechnung
-            </button>
           </div>
         );
 
@@ -520,16 +514,20 @@ export default function MobileCalculator() {
             Jetzt berechnen →
           </button>
         ) : (
-          // Screens 1-4: Zurück / Weiter
+          // Screens 1-4: Zurück / Weiter (oder Neue Berechnung auf letztem Screen)
           <div className="flex gap-3">
-            {screen > 1 && (
-              <button onClick={() => navigate(-1)}
-                className={`flex-none px-5 rounded-2xl font-semibold transition-all active:scale-95 ${sz.btn}`}
-                style={{ background: "rgba(255,255,255,0.08)", color: "white" }}>
-                ←
+            <button onClick={() => navigate(-1)}
+              className={`flex-none px-5 rounded-2xl font-semibold transition-all active:scale-95 ${sz.btn}`}
+              style={{ background: "rgba(255,255,255,0.08)", color: "white" }}>
+              ←
+            </button>
+            {isLast ? (
+              <button onClick={() => setScreen(0)}
+                className={`flex-1 rounded-2xl font-bold transition-all active:scale-95 ${sz.btn}`}
+                style={{ background: "rgba(255,255,255,0.08)", color: "rgba(255,255,255,0.6)" }}>
+                Neue Berechnung
               </button>
-            )}
-            {!isLast && (
+            ) : (
               <button onClick={() => navigate(1)}
                 className={`flex-1 rounded-2xl font-bold transition-all active:scale-95 ${sz.btn}`}
                 style={{ background: GOLD, color: BLACK }}>
