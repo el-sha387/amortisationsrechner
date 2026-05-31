@@ -327,7 +327,12 @@ export default function MobileCalculator() {
               ))}
             </div>
           </div>
-          <div className="text-white/25 text-xs">{t.poweredBy}</div>
+          <div className="flex flex-col items-center gap-2 pb-2">
+            <span className="text-white/30 text-xs">powered by</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img src="/gebioMized-logo.png" alt="gebioMized"
+              style={{height:22,objectFit:"contain",filter:"invert(1) grayscale(1) brightness(2)",opacity:0.6}}/>
+          </div>
         </div>
       );
 
