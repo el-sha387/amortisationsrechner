@@ -180,43 +180,49 @@ export default function MobileCalculator() {
       // 1: Paket-Auswahl
       case 1:
         return (
-          <div className={`${sz.px} py-4 ${sz.gap}`}>
-            <div>
-              <h2 className={`font-bold text-white mb-1 ${sz.h}`}>AiRO Paket wählen</h2>
-              <p className="text-white/50 text-sm">Die Lizenzkosten pro Twin bestimmen deine Marge.</p>
+          <div className={`${sz.px} py-4 space-y-4`}>
+
+            {/* Highlight: gewähltes Paket */}
+            <div className="rounded-2xl p-5" style={{ background: GOLD }}>
+              <div className="text-black/60 text-xs font-bold uppercase tracking-wide mb-1">Gewähltes Paket</div>
+              <div className="font-black text-black leading-tight" style={{ fontSize: isTablet ? 52 : 44 }}>
+                {paket.name}
+              </div>
+              <div className="text-black/60 text-sm mt-2">
+                {paket.kostenProTwin} € / Twin · {paket.twinsJahr} Twins im Jahr
+              </div>
             </div>
-            <div className="grid grid-cols-2 gap-4">
+
+            {/* 2 Paket-Cards */}
+            <div className="grid grid-cols-2 gap-3">
               {PAKETE.map(p => (
                 <button key={p.id} onClick={() => setPaketId(p.id)}
-                  className="rounded-2xl border-2 p-5 text-left transition-all active:scale-95"
+                  className="rounded-2xl border-2 p-4 text-left transition-all active:scale-95"
                   style={{
                     borderColor: paketId === p.id ? GOLD : "rgba(255,255,255,0.15)",
-                    background:  paketId === p.id ? GOLD : "rgba(255,255,255,0.06)",
+                    background:  paketId === p.id ? "rgba(245,168,0,0.15)" : "rgba(255,255,255,0.06)",
                   }}>
-                  <div className={`font-black text-xl mb-1 ${paketId === p.id ? "text-black" : "text-white"}`}>
+                  <div className="font-black text-lg mb-1" style={{ color: paketId === p.id ? GOLD : "white" }}>
                     {p.name}
                   </div>
-                  <div className={`text-2xl font-black mb-2 ${paketId === p.id ? "text-black" : "text-white"}`}>
+                  <div className="font-black text-2xl" style={{ color: paketId === p.id ? GOLD : "rgba(255,255,255,0.6)" }}>
                     {p.kostenProTwin} €
                   </div>
-                  <div className={`text-xs font-semibold ${paketId === p.id ? "text-black/60" : "text-white/50"}`}>
-                    pro Twin
-                  </div>
-                  <div className={`text-xs mt-2 ${paketId === p.id ? "text-black/60" : "text-white/40"}`}>
-                    {p.twinsJahr} Twins / Jahr<br/>
-                    {p.jahreslizenz.toLocaleString("de-DE")} € / Jahr
+                  <div className="text-xs mt-1 text-white/40">
+                    pro Twin · {p.twinsJahr}/Jahr
                   </div>
                 </button>
               ))}
             </div>
 
-            <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.1)" }}>
-              <div className="text-xs font-bold uppercase tracking-wide mb-3 text-white/50">Margen-Übersicht</div>
+            {/* Margen-Übersicht */}
+            <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="text-xs font-bold uppercase tracking-wide mb-3 text-white/40">Marge pro Session</div>
               {SESSION_TYPEN.map(t => (
-                <div key={t.id} className="flex justify-between items-center py-1.5 border-b border-white/5 last:border-0">
+                <div key={t.id} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
                   <span className="text-sm text-white/70">{t.name}</span>
                   <span className="font-bold text-sm" style={{ color: GOLD }}>
-                    {fmt(t.preisNetto - paket.kostenProTwin, 0)} € Marge
+                    {fmt(t.preisNetto - paket.kostenProTwin, 0)} €
                   </span>
                 </div>
               ))}
@@ -227,47 +233,46 @@ export default function MobileCalculator() {
       // 2: Session-Mix
       case 2:
         return (
-          <div className={`${sz.px} py-4 space-y-3`}>
-            <div>
-              <h2 className={`font-bold text-white mb-1 ${sz.h}`}>Sessions / Monat</h2>
-              <p className="text-white/50 text-sm">Wie viele Sessions planst du pro Typ?</p>
+          <div className={`${sz.px} py-4 space-y-4`}>
+
+            {/* Highlight: Gesamt */}
+            <div className="rounded-2xl p-5" style={{ background: GOLD }}>
+              <div className="text-black/60 text-xs font-bold uppercase tracking-wide mb-1">Sessions / Monat</div>
+              <div className="font-black text-black leading-tight" style={{ fontSize: isTablet ? 52 : 44 }}>
+                {ergebnis.sessionsMonat}
+              </div>
+              <div className="text-black/60 text-sm mt-2">
+                {ergebnis.sessionsJahr} Twins / Jahr · Einnahmen {fmt(ergebnis.einnahmen)} € / Mo.
+              </div>
             </div>
+
+            {/* Session-Cards */}
+            <div className="rounded-2xl overflow-hidden" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="text-xs font-bold uppercase tracking-wide px-4 pt-4 pb-2 text-white/40">Anzahl pro Typ</div>
             {SESSION_TYPEN.map(t => (
-              <div key={t.id} className="rounded-2xl p-4 flex items-center gap-4"
-                style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div key={t.id} className="px-4 py-3 flex items-center gap-4 border-b border-white/5 last:border-0">
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-white text-sm truncate">{t.name}</div>
                   <div className="text-xs text-white/40 mt-0.5">
-                    {t.dauerMin} Min · {fmt(t.preisNetto, 0)} € · Marge{" "}
+                    {t.dauerMin} Min · Marge{" "}
                     <span style={{ color: GOLD }}>{fmt(t.preisNetto - paket.kostenProTwin, 0)} €</span>
                   </div>
                 </div>
-                <div className="flex items-center gap-2 flex-none">
+                <div className="flex items-center gap-3 flex-none">
                   <button
                     onClick={() => setMengen(prev => ({ ...prev, [t.id]: Math.max(0, prev[t.id] - 1) }))}
-                    className="w-9 h-9 rounded-xl font-bold text-lg flex items-center justify-center active:scale-90 transition-all"
+                    className="w-9 h-9 rounded-xl font-bold text-xl flex items-center justify-center active:scale-90 transition-all"
                     style={{ background: "rgba(255,255,255,0.1)", color: "white" }}>−</button>
-                  <span className="font-black text-xl w-7 text-center" style={{ color: GOLD }}>
+                  <span className="font-black text-xl w-6 text-center" style={{ color: GOLD }}>
                     {mengen[t.id]}
                   </span>
                   <button
                     onClick={() => setMengen(prev => ({ ...prev, [t.id]: prev[t.id] + 1 }))}
-                    className="w-9 h-9 rounded-xl font-bold text-lg flex items-center justify-center active:scale-90 transition-all"
+                    className="w-9 h-9 rounded-xl font-bold text-xl flex items-center justify-center active:scale-90 transition-all"
                     style={{ background: GOLD, color: BLACK }}>+</button>
                 </div>
               </div>
             ))}
-
-            <div className="rounded-2xl p-4 flex justify-between items-center"
-              style={{ background: GOLD }}>
-              <div>
-                <div className="font-black text-black text-sm">Gesamt</div>
-                <div className="text-black/60 text-xs">{ergebnis.sessionsJahr} Twins / Jahr</div>
-              </div>
-              <div className="text-right">
-                <div className="font-black text-black text-2xl">{ergebnis.sessionsMonat}</div>
-                <div className="text-black/60 text-xs">Sessions / Mo.</div>
-              </div>
             </div>
 
             {ergebnis.effektivHinweis && (
@@ -294,60 +299,61 @@ export default function MobileCalculator() {
       // 3: Kosten
       case 3:
         return (
-          <div className={`${sz.px} py-4 ${sz.gap}`}>
-            <div>
-              <h2 className={`font-bold text-white mb-1 ${sz.h}`}>Mitarbeiter & Raum</h2>
-              <p className="text-white/50 text-sm">Deine laufenden Kosten</p>
+          <div className={`${sz.px} py-4 space-y-4`}>
+
+            {/* Highlight: Gesamtkosten */}
+            <div className="rounded-2xl p-5" style={{ background: GOLD }}>
+              <div className="text-black/60 text-xs font-bold uppercase tracking-wide mb-1">Kosten / Monat</div>
+              <div className="font-black text-black leading-tight" style={{ fontSize: isTablet ? 52 : 44 }}>
+                {fmt(ergebnis.ausgaben)} €
+              </div>
+              <div className="text-black/60 text-sm mt-2">
+                davon Lizenz {fmt(ergebnis.lizenzkosten)} € · Personal {fmt(ergebnis.personalkosten)} €
+              </div>
             </div>
 
-            <div>
+            {/* Gehalt-Slider */}
+            <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex justify-between items-baseline mb-3">
-                <span className="text-white/70 text-sm font-semibold">Bruttogehalt / Monat</span>
-                <span className="font-black text-2xl" style={{ color: GOLD }}>
-                  {gehalt.toLocaleString("de-DE")} €
-                </span>
+                <span className="text-xs font-bold uppercase tracking-wide text-white/40">Bruttogehalt / Monat</span>
+                <span className="font-black text-xl" style={{ color: GOLD }}>{gehalt.toLocaleString("de-DE")} €</span>
               </div>
               <input type="range" min={2000} max={4000} step={100} value={gehalt}
                 onChange={e => setGehalt(Number(e.target.value))}
                 className="w-full" style={{ accentColor: GOLD }}/>
-              <div className="flex justify-between text-white/30 text-xs mt-1">
+              <div className="flex justify-between text-white/30 text-xs mt-2">
                 <span>2.000 €</span><span>4.000 €</span>
               </div>
             </div>
 
-            <div>
+            {/* Raummiete-Slider */}
+            <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
               <div className="flex justify-between items-baseline mb-3">
-                <span className="text-white/70 text-sm font-semibold">Raummiete / m²</span>
-                <span className="font-black text-2xl" style={{ color: GOLD }}>{raumkosten} €</span>
+                <span className="text-xs font-bold uppercase tracking-wide text-white/40">Raummiete / m²</span>
+                <span className="font-black text-xl" style={{ color: GOLD }}>{raumkosten} €</span>
               </div>
               <input type="range" min={8} max={25} step={1} value={raumkosten}
                 onChange={e => setRaumkosten(Number(e.target.value))}
                 className="w-full" style={{ accentColor: GOLD }}/>
-              <div className="flex justify-between text-white/30 text-xs mt-1">
-                <span>8 €</span><span>Fläche: {annahmen.raumQm} m²</span><span>25 €</span>
+              <div className="flex justify-between text-white/30 text-xs mt-2">
+                <span>8 €</span><span>Fläche {annahmen.raumQm} m²</span><span>25 €</span>
               </div>
             </div>
 
-            <div className="rounded-2xl p-4 space-y-2"
-              style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
-              <div className="text-xs font-bold uppercase tracking-wide text-white/40 mb-3">Kostenvorschau / Monat</div>
+            {/* Aufschlüsselung */}
+            <div className="rounded-2xl p-4" style={{ background: "rgba(255,255,255,0.06)", border: "1px solid rgba(255,255,255,0.08)" }}>
+              <div className="text-xs font-bold uppercase tracking-wide text-white/40 mb-3">Aufschlüsselung</div>
               {[
                 { label: `AiRO-Lizenz (${ergebnis.sessionsMonat} × ${ergebnis.effektivPaket.kostenProTwin} €)`, val: ergebnis.lizenzkosten, gold: true },
                 { label: "Personalkosten",   val: ergebnis.personalkosten },
                 { label: "Raumkosten",       val: raumkosten * annahmen.raumQm },
                 { label: "ISCO / Sonstiges", val: annahmen.iscoJahr / 12 },
               ].map(({ label, val, gold }) => (
-                <div key={label} className="flex justify-between text-sm">
+                <div key={label} className="flex justify-between text-sm py-1.5 border-b border-white/5 last:border-0">
                   <span className="text-white/50">{label}</span>
-                  <span className="font-semibold" style={{ color: gold ? GOLD : "white" }}>
-                    {fmt(val)} €
-                  </span>
+                  <span className="font-semibold" style={{ color: gold ? GOLD : "white" }}>{fmt(val)} €</span>
                 </div>
               ))}
-              <div className="flex justify-between text-sm font-bold pt-2 border-t border-white/10">
-                <span className="text-white">Gesamt</span>
-                <span style={{ color: GOLD }}>{fmt(ergebnis.ausgaben)} €</span>
-              </div>
             </div>
           </div>
         );
