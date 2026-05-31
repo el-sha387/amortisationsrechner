@@ -332,11 +332,11 @@ export default function Calculator() {
 
   return (
     <>
-    <div className="no-print max-w-5xl mx-auto px-4 py-6">
+    <div className="no-print max-w-7xl mx-auto px-4 py-4">
 
       {/* Header + Tabs */}
-      <div className="rounded-2xl mb-5 overflow-hidden shadow-md" style={{ background: "#0d0d0d" }}>
-        <div className="px-6 py-5 flex items-center justify-between">
+      <div className="rounded-2xl mb-3 overflow-hidden shadow-md" style={{ background: "#0d0d0d" }}>
+        <div className="px-6 py-3 flex items-center justify-between">
           <div className="flex items-center gap-5">
             <Image src="/airo-logo.png" alt="AiRO Logo" width={100} height={50}
               style={{ objectFit: "contain" }}/>
@@ -369,13 +369,13 @@ export default function Calculator() {
 
       {/* ── Tab: Rechner ── */}
       {activeTab === "rechner" && (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
           {/* Linke Spalte */}
-          <div className="space-y-4">
+          <div className="space-y-3">
 
             {/* Paket-Auswahl */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-3"
                 style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>AiRO Paket</h2>
               <div className="grid grid-cols-2 gap-3">
@@ -418,12 +418,12 @@ export default function Calculator() {
             </div>
 
             {/* Session-Mix */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-4"
                 style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>
                 Sessions / Monat
               </h2>
-              <div className="space-y-4">
+              <div className="space-y-2">
                 {SESSION_TYPEN.map(t => (
                   <div key={t.id}>
                     <div className="flex items-center gap-3">
@@ -457,7 +457,7 @@ export default function Calculator() {
             </div>
 
             {/* Gehalt */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-3"
                 style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>
                 Mitarbeiter Bruttogehalt / Monat
@@ -476,7 +476,7 @@ export default function Calculator() {
             </div>
 
             {/* Raumkosten */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-3"
                 style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>Raummiete / m²</h2>
               <div className="flex items-center gap-3">
@@ -491,7 +491,7 @@ export default function Calculator() {
           </div>
 
           {/* Rechte Spalte */}
-          <div className="space-y-4">
+          <div className="space-y-3">
 
             {/* Metriken */}
             <div className="grid grid-cols-2 gap-3">
@@ -518,7 +518,7 @@ export default function Calculator() {
             </div>
 
             {/* Kostenaufschlüsselung */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
               <div className="font-bold text-sm uppercase tracking-wide mb-3"
                 style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>
                 Kostenaufschlüsselung / Monat
@@ -569,7 +569,7 @@ export default function Calculator() {
             </div>
 
             {/* Report */}
-            <div className="bg-white rounded-2xl p-5 shadow-sm space-y-3">
+            <div className="bg-white rounded-2xl p-4 shadow-sm space-y-3">
               <div className="text-xs font-bold uppercase tracking-wide"
                 style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>
                 Report erstellen
@@ -604,7 +604,7 @@ export default function Calculator() {
       {activeTab === "annahmen" && (
         <div className="space-y-5">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-4"
                 style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>Session-Preise (netto)</h2>
               <div className="space-y-2 text-sm text-gray-500">
@@ -619,7 +619,7 @@ export default function Calculator() {
                 </p>
               </div>
             </div>
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-4"
                 style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>Raum & Betrieb</h2>
               <div className="space-y-4">
@@ -629,7 +629,7 @@ export default function Calculator() {
                   onChange={v => setA("iscoJahr", v)} suffix="€" step={10}/>
               </div>
             </div>
-            <div className="bg-white rounded-2xl p-5 shadow-sm">
+            <div className="bg-white rounded-2xl p-4 shadow-sm">
               <h2 className="font-bold text-sm uppercase tracking-wide mb-4"
                 style={{ color: "#0d0d0d", fontFamily: "var(--font-heading)" }}>Mitarbeiter</h2>
               <div className="space-y-4">
