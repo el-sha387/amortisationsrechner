@@ -22,9 +22,12 @@ const DEFAULT_ANNAHMEN: Annahmen = { raumQm: 10, iscoJahr: 348, arbeitszeitPuffe
 const DEFAULT_MENGEN: Record<string, number> = { helm: 2, addon: 2, aero: 2, windkanal: 2 };
 const GOLD = "#F5A800";
 const BLACK = "#0d0d0d";
-const TOTAL_SCREENS = 5;
+const TOTAL_SCREENS_TEAM = 5;  // Paket + Sessions + Kosten + Auswertung + (letzter)
+const TOTAL_SCREENS_SOLO = 4;  // Paket + Sessions + Auswertung + (letzter) — kein Kosten-Screen
 
-function berechne(mengen: Record<string, number>, paket: Paket, gehalt: number, raumkosten: number, a: Annahmen) {
+type StudioMode = "solo" | "team";
+
+function berechne(mengen: Record<string, number>, paket: Paket, gehalt: number, raumkosten: number, a: Annahmen, soloMode = false) {
   const sessionsMonat = SESSION_TYPEN.reduce((s, t) => s + mengen[t.id], 0);
   const einnahmen     = SESSION_TYPEN.reduce((s, t) => s + mengen[t.id] * t.preisNetto, 0);
   const sessionsJahr  = sessionsMonat * 12;
@@ -34,8 +37,9 @@ function berechne(mengen: Record<string, number>, paket: Paket, gehalt: number, 
   const lizenzkosten   = sessionsMonat * effektivPaket.kostenProTwin;
   const totalDauerMin  = SESSION_TYPEN.reduce((s, t) => s + mengen[t.id] * t.dauerMin, 0);
   const stundenGesamt  = sessionsMonat > 0 ? (totalDauerMin + sessionsMonat * a.arbeitszeitPuffer) / 60 : 0;
-  const personalkosten = gehalt * (1 + a.lohnNebenkosten / 100) * stundenGesamt / a.vollzeitStunden;
-  const fixKosten      = raumkosten * a.raumQm + a.iscoJahr / 12;
+  // Solo-Modus: nur Lizenzkosten, kein Personal / kein Raum / kein ISCO
+  const personalkosten = soloMode ? 0 : gehalt * (1 + a.lohnNebenkosten / 100) * stundenGesamt / a.vollzeitStunden;
+  const fixKosten      = soloMode ? 0 : raumkosten * a.raumQm + a.iscoJahr / 12;
   const ausgaben       = lizenzkosten + personalkosten + fixKosten;
   const ueberschuss    = einnahmen - ausgaben;
   const umsatzProSession = sessionsMonat > 0 ? einnahmen / sessionsMonat : 0;
@@ -282,16 +286,20 @@ function ProgressDots({ current, total }: { current: number; total: number }) {
 }
 
 export default function MobileCalculator() {
-  const [screen, setScreen]         = useState(0);
-  const [isTablet, setIsTablet]     = useState(false);
-  const [lang, setLang]             = useState<Lang>("de");
-  const [paketId, setPaketId]       = useState<"starter"|"pro">("pro");
-  const [mengen, setMengen]         = useState<Record<string,number>>(DEFAULT_MENGEN);
-  const [gehalt, setGehalt]         = useState(3000);
-  const [raumkosten, setRaumkosten] = useState(15);
-  const [annahmen]                  = useState<Annahmen>(DEFAULT_ANNAHMEN);
-  const [kundenName, setKundenName] = useState("");
-  const [pdfLoading, setPdfLoading] = useState(false);
+  const [screen, setScreen]           = useState(0);
+  const [isTablet, setIsTablet]       = useState(false);
+  const [lang, setLang]               = useState<Lang>("de");
+  const [studioMode, setStudioMode]   = useState<StudioMode|null>(null);
+  const [paketId, setPaketId]         = useState<"starter"|"pro">("pro");
+  const [mengen, setMengen]           = useState<Record<string,number>>(DEFAULT_MENGEN);
+  const [gehalt, setGehalt]           = useState(3000);
+  const [raumkosten, setRaumkosten]   = useState(15);
+  const [annahmen]                    = useState<Annahmen>(DEFAULT_ANNAHMEN);
+  const [kundenName, setKundenName]   = useState("");
+  const [pdfLoading, setPdfLoading]   = useState(false);
+
+  const isSolo       = studioMode === "solo";
+  const TOTAL_SCREENS = isSolo ? TOTAL_SCREENS_SOLO : TOTAL_SCREENS_TEAM;
 
   useEffect(()=>{
     function check() { setIsTablet(window.innerWidth>=640); }
@@ -302,14 +310,27 @@ export default function MobileCalculator() {
   const t = T[lang];
   const paket = PAKETE.find(p=>p.id===paketId)!;
   const ergebnis = useMemo(
-    ()=>berechne(mengen,paket,gehalt,raumkosten,annahmen),
-    [mengen,paket,gehalt,raumkosten,annahmen]
+    ()=>berechne(mengen,paket,gehalt,raumkosten,annahmen,isSolo),
+    [mengen,paket,gehalt,raumkosten,annahmen,isSolo]
   );
   const positiv = ergebnis.ueberschuss>0;
 
+  // Im Solo-Modus wird Screen 3 (Kosten) übersprungen
   function navigate(delta: 1|-1) {
-    setScreen(s=>Math.max(0,Math.min(TOTAL_SCREENS-1,s+delta)));
+    setScreen(s => {
+      let next = s + delta;
+      if (isSolo && next === 3) next += delta; // Screen 3 = Kosten → skip
+      return Math.max(0, Math.min(4, next));   // max screen bleibt immer 4
+    });
   }
+
+  const isLast = screen === 4; // Auswertung ist letzter Screen in beiden Modi
+
+  // ProgressDots: Solo zeigt 3 Punkte, Team 4 Punkte (ohne Splash)
+  const dotTotal   = isSolo ? 3 : 4;
+  const dotCurrent = isSolo
+    ? (screen === 1 ? 0 : screen === 2 ? 1 : 2)  // 1→0, 2→1, 4→2
+    : screen - 1;                                   // 1→0, 2→1, 3→2, 4→3
   async function handlePDF() {
     setPdfLoading(true);
     try { await generateAndSharePDF(ergebnis,paket,gehalt,raumkosten,kundenName,lang,annahmen); }
@@ -320,7 +341,6 @@ export default function MobileCalculator() {
   const px  = isTablet?"px-10":"px-5";
   const btn = isTablet?"py-5 text-lg":"py-4 text-base";
   const isStart = screen===0;
-  const isLast  = screen===TOTAL_SCREENS-1;
 
   function renderContent() {
     switch(screen) {
@@ -328,7 +348,7 @@ export default function MobileCalculator() {
       case 0: return (
         <div className={`flex flex-col items-center justify-between h-full text-center ${px}`}
           style={{paddingTop:isTablet?60:40,paddingBottom:20}}>
-          <div className="flex-1 flex flex-col items-center justify-center gap-6">
+          <div className="flex-1 flex flex-col items-center justify-center gap-5">
             <Image src="/airo-logo.png" alt="AiRO" width={isTablet?180:140} height={isTablet?90:70}
               style={{objectFit:"contain"}}/>
             <div>
@@ -337,10 +357,45 @@ export default function MobileCalculator() {
               </h1>
               <p className="text-white/60 mt-3 leading-relaxed text-sm max-w-xs mx-auto">{t.splashSub}</p>
             </div>
+
+            {/* Modus-Auswahl — kein Default */}
+            <div className="w-full space-y-3 mt-2">
+              <p className="text-white/50 text-xs font-semibold uppercase tracking-wide">
+                {lang==="de" ? "Welches Szenario passt zu dir?" : "Which scenario applies to you?"}
+              </p>
+              <div className="grid grid-cols-2 gap-3">
+                {([
+                  { mode: "solo" as StudioMode,
+                    icon: "🏠",
+                    label: lang==="de" ? "Solo-Studio" : "Solo Studio",
+                    sub:   lang==="de" ? "Allein, eigene Räume vorhanden" : "Independent, own space",
+                    hint:  lang==="de" ? "Nur Twin-Lizenzkosten" : "Twin license costs only" },
+                  { mode: "team" as StudioMode,
+                    icon: "👥",
+                    label: lang==="de" ? "Team-Studio" : "Team Studio",
+                    sub:   lang==="de" ? "Mit angestellten Mitarbeitern" : "With employed staff",
+                    hint:  lang==="de" ? "Alle Kosten eingerechnet" : "All costs included" },
+                ]).map(opt => (
+                  <button key={opt.mode} onClick={() => setStudioMode(opt.mode)}
+                    className="rounded-2xl border-2 p-4 text-left transition-all active:scale-95"
+                    style={{
+                      borderColor: studioMode===opt.mode ? GOLD : "rgba(255,255,255,0.2)",
+                      background:  studioMode===opt.mode ? "rgba(245,168,0,0.15)" : "rgba(255,255,255,0.06)",
+                    }}>
+                    <div className="text-2xl mb-2">{opt.icon}</div>
+                    <div className="font-bold text-sm" style={{color: studioMode===opt.mode ? GOLD : "white"}}>{opt.label}</div>
+                    <div className="text-xs text-white/50 mt-1">{opt.sub}</div>
+                    <div className="text-xs mt-2 font-semibold" style={{color: studioMode===opt.mode ? GOLD : "rgba(255,255,255,0.3)"}}>{opt.hint}</div>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Lang-Toggle */}
             <div className="flex rounded-2xl overflow-hidden border border-white/20">
               {(["de","en"] as Lang[]).map(l=>(
                 <button key={l} onClick={()=>setLang(l)}
-                  className="px-8 py-3 text-sm font-bold transition-all"
+                  className="px-8 py-2.5 text-sm font-bold transition-all"
                   style={{background:lang===l?GOLD:"transparent",color:lang===l?BLACK:"rgba(255,255,255,0.5)"}}>
                   {l.toUpperCase()}
                 </button>
@@ -483,6 +538,18 @@ export default function MobileCalculator() {
 
       case 4: return (
         <div className={`${px} py-3 space-y-3`}>
+
+          {/* Solo-Modus Badge */}
+          {isSolo && (
+            <div className="rounded-xl px-4 py-2 flex items-center gap-2"
+              style={{background:"rgba(245,168,0,0.12)",border:"1px solid rgba(245,168,0,0.3)"}}>
+              <span style={{color:GOLD}}>🏠</span>
+              <span className="text-xs font-semibold" style={{color:GOLD}}>
+                Solo-Studio · {lang==="de"?"Eigene Arbeitszeit nicht eingerechnet":"Own working time not included"}
+              </span>
+            </div>
+          )}
+
           <div className="rounded-2xl px-5 py-4" style={{background:positiv?GOLD:"#ef4444"}}>
             <div className="text-black/60 text-xs font-bold uppercase tracking-wide mb-0.5">{t.jahresgewinn}</div>
             <div className="font-black text-black leading-tight" style={{fontSize:isTablet?48:40}}>
@@ -580,11 +647,11 @@ export default function MobileCalculator() {
               </div>
               <div className="rounded-xl px-2 py-1 text-xs font-bold"
                 style={{background:"rgba(245,168,0,0.15)",color:GOLD}}>
-                {paket.name} · {paket.kostenProTwin} €/Twin
+                {isSolo ? "🏠 " : "👥 "}{paket.name} · {paket.kostenProTwin} €/Twin
               </div>
             </div>
           </div>
-          <ProgressDots current={screen-1} total={TOTAL_SCREENS-1}/>
+          <ProgressDots current={dotCurrent} total={dotTotal}/>
         </div>
       )}
 
@@ -595,10 +662,10 @@ export default function MobileCalculator() {
       <div className={`flex-none ${px} pb-6 pt-3 flex gap-3`}
         style={{borderTop:isStart?"none":"1px solid rgba(255,255,255,0.06)",minHeight:isTablet?92:80}}>
         {isStart ? (
-          <button onClick={()=>navigate(1)}
+          <button onClick={()=>navigate(1)} disabled={studioMode===null}
             className={`w-full rounded-2xl font-bold transition-all active:scale-95 ${btn}`}
-            style={{background:GOLD,color:BLACK}}>
-            {t.splashCta}
+            style={{background:studioMode?GOLD:"rgba(255,255,255,0.15)",color:studioMode?BLACK:"rgba(255,255,255,0.4)",cursor:studioMode?"pointer":"not-allowed"}}>
+            {studioMode ? (lang==="de"?"Weiter →":"Next →") : (lang==="de"?"Bitte Szenario wählen":"Please select a scenario")}
           </button>
         ) : (
           <div className="flex gap-3 w-full">
@@ -606,7 +673,7 @@ export default function MobileCalculator() {
               className={`flex-none px-5 rounded-2xl font-semibold transition-all active:scale-95 ${btn}`}
               style={{background:"rgba(255,255,255,0.08)",color:"white"}}>←</button>
             {isLast ? (
-              <button onClick={()=>setScreen(0)}
+              <button onClick={()=>{setScreen(0);setStudioMode(null);}}
                 className={`flex-1 rounded-2xl font-bold transition-all active:scale-95 ${btn}`}
                 style={{background:"rgba(255,255,255,0.08)",color:"rgba(255,255,255,0.6)"}}>
                 {t.neueBerechnung}
