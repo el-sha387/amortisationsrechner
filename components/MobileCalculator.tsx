@@ -34,13 +34,14 @@ function berechne(mengen: Record<string, number>, paket: Paket, gehalt: number, 
   let effektivPaket = paket;
   let autoUpgrade = false;
   if (paket.id === "starter" && sessionsJahr > 50) { effektivPaket = PAKETE[1]; autoUpgrade = true; }
-  const lizenzkosten   = sessionsMonat * effektivPaket.kostenProTwin;
   const totalDauerMin  = SESSION_TYPEN.reduce((s, t) => s + mengen[t.id] * t.dauerMin, 0);
   const stundenGesamt  = sessionsMonat > 0 ? (totalDauerMin + sessionsMonat * a.arbeitszeitPuffer) / 60 : 0;
-  // Solo-Modus: nur Lizenzkosten, kein Personal / kein Raum / kein ISCO
+
+  // Solo: Jahreslizenz als einziger monatlicher Fixblock — KEIN zusätzlicher Per-Session-Abzug
+  // Team: Lizenz pro Session + Personal + Raum + ISCO
+  const lizenzkosten   = soloMode ? effektivPaket.jahreslizenz / 12 : sessionsMonat * effektivPaket.kostenProTwin;
   const personalkosten = soloMode ? 0 : gehalt * (1 + a.lohnNebenkosten / 100) * stundenGesamt / a.vollzeitStunden;
-  // Solo: Jahreslizenz als einziger Fixblock (monatlich anteilig), kein Raum/ISCO
-  const fixKosten      = soloMode ? effektivPaket.jahreslizenz / 12 : raumkosten * a.raumQm + a.iscoJahr / 12;
+  const fixKosten      = soloMode ? 0 : raumkosten * a.raumQm + a.iscoJahr / 12;
   const ausgaben       = lizenzkosten + personalkosten + fixKosten;
   const ueberschuss    = einnahmen - ausgaben;
   const umsatzProSession = sessionsMonat > 0 ? einnahmen / sessionsMonat : 0;
@@ -613,11 +614,17 @@ export default function MobileCalculator() {
           )}
           <div className="rounded-2xl px-4 py-3" style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)"}}>
             <div className="text-xs font-bold uppercase tracking-wide text-white/40 mb-2">{lang==="de"?"Kosten / Monat":"Costs / Month"}</div>
-            {[
+            {(isSolo ? [
+              // Solo: nur Jahreslizenz anteilig
+              {label: lang==="de"
+                ? `AiRO Jahreslizenz ${ergebnis.effektivPaket.name} (${ergebnis.effektivPaket.jahreslizenz.toLocaleString("de-DE")} € / Jahr)`
+                : `AiRO Annual License ${ergebnis.effektivPaket.name} (${ergebnis.effektivPaket.jahreslizenz.toLocaleString("de-DE")} € / year)`,
+               val: ergebnis.lizenzkosten, gold: true},
+            ] : [
               {label:t.airoLizenz(ergebnis.sessionsMonat,ergebnis.effektivPaket.kostenProTwin),val:ergebnis.lizenzkosten,gold:true},
               {label:t.personal,val:ergebnis.personalkosten},
               {label:t.isco+" + "+t.raumkosten,val:ergebnis.fixKosten},
-            ].map(({label,val,gold})=>(
+            ]).map(({label,val,gold})=>(
               <div key={label} className="flex justify-between text-sm py-1 border-b border-white/5 last:border-0">
                 <span className="text-white/50">{label}</span>
                 <span className="font-semibold" style={{color:gold?GOLD:"white"}}>{fmt(val)} €</span>
