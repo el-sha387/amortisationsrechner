@@ -551,22 +551,53 @@ export default function MobileCalculator() {
             </div>
           )}
 
-          <div className="rounded-2xl px-5 py-4" style={{background:positiv?GOLD:"#ef4444"}}>
-            <div className="text-black/60 text-xs font-bold uppercase tracking-wide mb-0.5">{t.jahresgewinn}</div>
-            <div className="font-black text-black leading-tight" style={{fontSize:isTablet?48:40}}>
-              {positiv?"":"–"}{fmt(Math.abs(ergebnis.jahresgewinn))} €
+          {isSolo ? (
+            /* Solo: Headline = Marge / Twin */
+            <div className="rounded-2xl px-5 py-4" style={{background:ergebnis.margeProSession>0?GOLD:"#ef4444"}}>
+              <div className="text-black/60 text-xs font-bold uppercase tracking-wide mb-0.5">
+                {lang==="de"?"Ø Marge / Twin":"Ø Margin / Twin"}
+              </div>
+              <div className="font-black text-black leading-tight" style={{fontSize:isTablet?48:40}}>
+                {fmt(ergebnis.margeProSession,2)} €
+              </div>
+              <div className="text-black/70 text-sm mt-2 font-semibold">
+                {ergebnis.sessionsMonat > 0
+                  ? `→ ${lang==="de"?"bei":"at"} ${ergebnis.sessionsMonat} Sessions/Mo. = ${fmt(ergebnis.jahresgewinn)} €/${lang==="de"?"Jahr":"year"}`
+                  : lang==="de"?"Sessions eintragen für Jahreshochrechnung":"Enter sessions for annual projection"}
+              </div>
             </div>
-            <div className="text-black/60 text-xs mt-1">
-              {t.proMonat(fmt(Math.abs(ergebnis.ueberschuss)),ergebnis.sessionsMonat)}
+          ) : (
+            /* Team: Headline = Jahresgewinn (wie bisher) */
+            <div className="rounded-2xl px-5 py-4" style={{background:positiv?GOLD:"#ef4444"}}>
+              <div className="text-black/60 text-xs font-bold uppercase tracking-wide mb-0.5">{t.jahresgewinn}</div>
+              <div className="font-black text-black leading-tight" style={{fontSize:isTablet?48:40}}>
+                {positiv?"":"–"}{fmt(Math.abs(ergebnis.jahresgewinn))} €
+              </div>
+              <div className="text-black/60 text-xs mt-1">
+                {t.proMonat(fmt(Math.abs(ergebnis.ueberschuss)),ergebnis.sessionsMonat)}
+              </div>
+              {!positiv && <div className="text-black/70 text-xs mt-1 font-semibold">{t.sessionsErhoehen}</div>}
             </div>
-            {!positiv && <div className="text-black/70 text-xs mt-1 font-semibold">{t.sessionsErhoehen}</div>}
-          </div>
+          )}
           <div className="grid grid-cols-3 gap-2">
-            {[
+            {(isSolo ? [
+              // Solo: Lizenzkosten / Twin, Break-even in Twins/Jahr, Jahresgewinn
+              {label: lang==="de"?"Lizenz / Twin":"License / Twin",
+               value: `${ergebnis.effektivPaket.kostenProTwin} €`,
+               sub:   t.proTwin},
+              {label: lang==="de"?"Lizenz gedeckt ab":"License covered from",
+               value: ergebnis.breakEvenSessions!==null
+                 ? `${ergebnis.breakEvenSessions * 12} Twins/${lang==="de"?"Jahr":"year"}`
+                 : "—",
+               sub: lang==="de"?"Twins / Jahr":"Twins / year"},
+              {label: t.jahresgewinn,
+               value: `${fmt(ergebnis.jahresgewinn)} €`,
+               sub:   lang==="de"?"bei akt. Sessions":"at current sessions"},
+            ] : [
               {label:t.margeSession,    value:`${fmt(ergebnis.margeProSession,0)} €`, sub:t.nachLizenz},
               {label:t.kostenGedecktAb, value:ergebnis.breakEvenSessions!==null?`${ergebnis.breakEvenSessions} / Mo.`:"—", sub:t.breakEven},
               {label:t.lizenzKostet,    value:`${ergebnis.effektivPaket.kostenProTwin} €`, sub:t.proTwin},
-            ].map(({label,value,sub})=>(
+            ]).map(({label,value,sub})=>(
               <div key={label} className="rounded-2xl p-3 text-center"
                 style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.1)"}}>
                 <div className="text-xs text-white/40 mb-1 leading-tight">{label}</div>
