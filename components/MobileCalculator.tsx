@@ -39,7 +39,8 @@ function berechne(mengen: Record<string, number>, paket: Paket, gehalt: number, 
   const stundenGesamt  = sessionsMonat > 0 ? (totalDauerMin + sessionsMonat * a.arbeitszeitPuffer) / 60 : 0;
   // Solo-Modus: nur Lizenzkosten, kein Personal / kein Raum / kein ISCO
   const personalkosten = soloMode ? 0 : gehalt * (1 + a.lohnNebenkosten / 100) * stundenGesamt / a.vollzeitStunden;
-  const fixKosten      = soloMode ? 0 : raumkosten * a.raumQm + a.iscoJahr / 12;
+  // Solo: Jahreslizenz als einziger Fixblock (monatlich anteilig), kein Raum/ISCO
+  const fixKosten      = soloMode ? effektivPaket.jahreslizenz / 12 : raumkosten * a.raumQm + a.iscoJahr / 12;
   const ausgaben       = lizenzkosten + personalkosten + fixKosten;
   const ueberschuss    = einnahmen - ausgaben;
   const umsatzProSession = sessionsMonat > 0 ? einnahmen / sessionsMonat : 0;
