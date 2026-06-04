@@ -4,15 +4,15 @@ import { useState, useMemo, useEffect } from "react";
 import Image from "next/image";
 import { T, Lang } from "@/lib/i18n";
 
-interface SessionTyp { id: string; name: string; nameEn: string; dauerMin: number; preisNetto: number; }
+interface SessionTyp { id: string; name: string; nameEn: string; dauerMin: number; preisNetto: number; preisBrutto: number; }
 interface Paket { id: "starter" | "pro"; name: string; twinsJahr: number; kostenProTwin: number; jahreslizenz: number; }
 interface Annahmen { raumQm: number; iscoJahr: number; arbeitszeitPuffer: number; lohnNebenkosten: number; vollzeitStunden: number; }
 
 const SESSION_TYPEN: SessionTyp[] = [
-  { id: "helm",      name: "Helmberatung",       nameEn: "Helmet Consultation", dauerMin: 60,  preisNetto: 167.23 },
-  { id: "addon",     name: "Aero Add-On",         nameEn: "Aero Add-On",         dauerMin: 30,  preisNetto: 83.19  },
-  { id: "aero",      name: "Aero Fit Potential",  nameEn: "Aero Fit Potential",  dauerMin: 60,  preisNetto: 167.23 },
-  { id: "windkanal", name: "Digitaler Windkanal", nameEn: "Digital Wind Tunnel", dauerMin: 150, preisNetto: 411.76 },
+  { id: "helm",      name: "Helmberatung",       nameEn: "Helmet Consultation", dauerMin: 60,  preisNetto: 167.23, preisBrutto: 199 },
+  { id: "addon",     name: "Aero Add-On",         nameEn: "Aero Add-On",         dauerMin: 30,  preisNetto: 83.19,  preisBrutto: 99  },
+  { id: "aero",      name: "Aero Fit Potential",  nameEn: "Aero Fit Potential",  dauerMin: 60,  preisNetto: 167.23, preisBrutto: 199 },
+  { id: "windkanal", name: "Digitaler Windkanal", nameEn: "Digital Wind Tunnel", dauerMin: 150, preisNetto: 411.76, preisBrutto: 490 },
 ];
 const PAKETE: Paket[] = [
   { id: "starter", name: "Starter", twinsJahr: 50,  kostenProTwin: 50, jahreslizenz: 2500 },
@@ -459,7 +459,9 @@ export default function MobileCalculator() {
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-white text-sm">{lang==="de"?t2.name:t2.nameEn}</div>
                   <div className="text-xs text-white/40 mt-0.5">
-                    {t2.dauerMin} Min · <span style={{color:GOLD}}>{fmt(t2.preisNetto,2)} € {lang==="de"?"netto":"net"}</span>
+                    {t2.dauerMin} Min · <span style={{color:GOLD}}>{t2.preisBrutto} € {lang==="de"?"brutto":"gross"}</span>
+                    <span className="mx-1 opacity-50">/</span>
+                    <span>{fmt(t2.preisNetto,2)} € {lang==="de"?"netto":"net"}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-none">
