@@ -45,21 +45,31 @@ function berechne(mengen: Record<string, number>, paket: Paket, gehalt: number, 
   const ausgaben       = lizenzkosten + personalkosten + fixKosten;
   const ueberschuss    = einnahmen - ausgaben;
   const umsatzProSession = sessionsMonat > 0 ? einnahmen / sessionsMonat : 0;
-  const margeProSession  = umsatzProSession - effektivPaket.kostenProTwin;
+  // Solo: keine Twin-Abzug pro Session (Flatrate bereits in lizenzkosten)
+  // Team: Marge nach Twin-Lizenz-Anteil
+  const margeProSession  = soloMode
+    ? umsatzProSession
+    : umsatzProSession - effektivPaket.kostenProTwin;
   const twinsUeber       = sessionsJahr - paket.twinsJahr;
   const sparenMitPro     = paket.id === "starter" && sessionsJahr <= 50
     ? Math.max(0, sessionsJahr * (50 - 35) - (3500 - 2500)) : 0;
 
-  // Echter Break-even: Fixkosten / (Umsatz − Lizenz − Personal) pro Session
-  // Personalkosten skalieren proportional mit Sessions → Personal/Session = konstant
-  const avgDauerMitPuffer = sessionsMonat > 0
-    ? totalDauerMin / sessionsMonat + a.arbeitszeitPuffer
-    : SESSION_TYPEN.reduce((s,t) => s + t.dauerMin, 0) / SESSION_TYPEN.length + a.arbeitszeitPuffer;
-  const personalProSession = gehalt * (1 + a.lohnNebenkosten / 100) * (avgDauerMitPuffer / 60) / a.vollzeitStunden;
-  // Gesamtmarge/Session nach Lizenz UND Personal
-  const echteMargeProSession = umsatzProSession - effektivPaket.kostenProTwin - personalProSession;
-  const breakEvenSessions = echteMargeProSession > 0
-    ? Math.ceil(fixKosten / echteMargeProSession) : null;
+  // Break-even:
+  // Solo: Sessions/Monat um monatliche Lizenzpauschale zu decken
+  // Team: Sessions/Monat um alle Fixkosten (Raum+ISCO) zu decken (inkl. Personal-Anteil)
+  let breakEvenSessions: number | null = null;
+  if (soloMode) {
+    breakEvenSessions = umsatzProSession > 0
+      ? Math.ceil(lizenzkosten / umsatzProSession) : null;
+  } else {
+    const avgDauerMitPuffer = sessionsMonat > 0
+      ? totalDauerMin / sessionsMonat + a.arbeitszeitPuffer
+      : SESSION_TYPEN.reduce((s,t) => s + t.dauerMin, 0) / SESSION_TYPEN.length + a.arbeitszeitPuffer;
+    const personalProSession = gehalt * (1 + a.lohnNebenkosten / 100) * (avgDauerMitPuffer / 60) / a.vollzeitStunden;
+    const echteMargeProSession = umsatzProSession - effektivPaket.kostenProTwin - personalProSession;
+    breakEvenSessions = echteMargeProSession > 0 && fixKosten > 0
+      ? Math.ceil(fixKosten / echteMargeProSession) : null;
+  }
   return { sessionsMonat, einnahmen, lizenzkosten, personalkosten, fixKosten,
            ausgaben, ueberschuss, umsatzProSession, margeProSession,
            sessionsJahr, twinsUeber, sparenMitPro, jahresgewinn: ueberschuss * 12,
@@ -73,7 +83,7 @@ function fmt(val: number, digits = 0) {
 async function generateAndSharePDF(
   ergebnis: ReturnType<typeof berechne>, paket: Paket,
   gehalt: number, raumkosten: number, kundenName: string,
-  lang: Lang, annahmen: Annahmen,
+  lang: Lang, annahmen: Annahmen, soloMode = false,
 ) {
   const t = T[lang];
   const { jsPDF } = await import("jspdf");
@@ -138,10 +148,19 @@ async function generateAndSharePDF(
   doc.text(`${ergebnis.sessionsMonat} Sessions / ${lang==="de"?"Monat":"month"} · Paket ${ergebnis.effektivPaket.name}`, W-M-4, y+21, {align:"right"});
   y+=40;
 
-  // ── 2. KPI Highlight-Boxen (3 Cards mit Gold-Akzent) ─────────────────────
+  // ── 2. KPI Highlight-Boxen ─────────────────────────────────────────────────
   const col = CW/3-3;
   const cols3 = [M, M+col+4.5, M+(col+4.5)*2];
-  const kpiData = [
+  const kpiData = soloMode ? [
+    // Solo: Ø Marge/Twin, Lizenz gedeckt ab X Sessions/Mo., Jahresgewinn
+    { label: lang==="de"?"Ø Marge / Twin":"Ø Margin / Twin",
+      val: `${fmt(ergebnis.margeProSession,2)} €`, sub: lang==="de"?"je Session":"per session", accent: true },
+    { label: lang==="de"?"Lizenz gedeckt ab":"License covered from",
+      val: ergebnis.breakEvenSessions!==null?`${ergebnis.breakEvenSessions} / Mo.`:"—",
+      sub: lang==="de"?"Sessions / Monat":"Sessions / month", accent: false },
+    { label: t.jahresgewinn,
+      val: `${fmt(ergebnis.jahresgewinn)} €`, sub: lang==="de"?"bei akt. Volumen":"at current volume", accent: false },
+  ] : [
     { label: t.margeSession,    val: `${fmt(ergebnis.margeProSession,0)} €`, sub: t.nachLizenz,   accent: true  },
     { label: t.kostenGedecktAb, val: ergebnis.breakEvenSessions!==null?`${ergebnis.breakEvenSessions} / Mo.`:"—", sub: t.breakEven, accent: false },
     { label: t.lizenzKostet,    val: `${ergebnis.effektivPaket.kostenProTwin} €`, sub: t.proTwin, accent: false },
@@ -185,14 +204,24 @@ async function generateAndSharePDF(
     return yy+rowH;
   }
 
-  // Linke Spalte unabhängig
+  // Linke Spalte — Kostenzeilen je nach Modus
   let yL = y;
   yL = drawBadge(t.pdfKosten, M, halfW, yL);
-  yL = drawRow(t.airoLizenz(ergebnis.sessionsMonat, ergebnis.effektivPaket.kostenProTwin), `${fmt(ergebnis.lizenzkosten)} €`, M, halfW, yL, true);
-  yL = drawRow(t.personal,   `${fmt(ergebnis.personalkosten)} €`,          M, halfW, yL);
-  yL = drawRow(t.raumkosten, `${fmt(raumkosten*annahmen.raumQm)} €`,       M, halfW, yL);
-  yL = drawRow(t.isco,       `${fmt(annahmen.iscoJahr/12)} €`,             M, halfW, yL);
-  yL = drawRow(lang==="de"?"Gesamt":"Total", `${fmt(ergebnis.ausgaben)} €`, M, halfW, yL, false, true);
+  if (soloMode) {
+    // Solo: nur Jahreslizenz als monatliche Pauschale
+    const lizLabel = lang==="de"
+      ? `AiRO Jahreslizenz ${ergebnis.effektivPaket.name} (${ergebnis.effektivPaket.jahreslizenz.toLocaleString("de-DE")} €/Jahr)`
+      : `AiRO Annual License ${ergebnis.effektivPaket.name} (${ergebnis.effektivPaket.jahreslizenz.toLocaleString("de-DE")} €/year)`;
+    yL = drawRow(lizLabel, `${fmt(ergebnis.lizenzkosten)} €`, M, halfW, yL, true);
+    yL = drawRow(lang==="de"?"Gesamt":"Total", `${fmt(ergebnis.ausgaben)} €`, M, halfW, yL, false, true);
+  } else {
+    // Team: alle Kostenblöcke
+    yL = drawRow(t.airoLizenz(ergebnis.sessionsMonat, ergebnis.effektivPaket.kostenProTwin), `${fmt(ergebnis.lizenzkosten)} €`, M, halfW, yL, true);
+    yL = drawRow(t.personal,   `${fmt(ergebnis.personalkosten)} €`,          M, halfW, yL);
+    yL = drawRow(t.raumkosten, `${fmt(raumkosten*annahmen.raumQm)} €`,       M, halfW, yL);
+    yL = drawRow(t.isco,       `${fmt(annahmen.iscoJahr/12)} €`,             M, halfW, yL);
+    yL = drawRow(lang==="de"?"Gesamt":"Total", `${fmt(ergebnis.ausgaben)} €`, M, halfW, yL, false, true);
+  }
 
   // Rechte Spalte unabhängig (startet auf gleicher Y wie links)
   let yR = y;
@@ -335,7 +364,7 @@ export default function MobileCalculator() {
     : screen - 1;                                   // 1→0, 2→1, 3→2, 4→3
   async function handlePDF() {
     setPdfLoading(true);
-    try { await generateAndSharePDF(ergebnis,paket,gehalt,raumkosten,kundenName,lang,annahmen); }
+    try { await generateAndSharePDF(ergebnis,paket,gehalt,raumkosten,kundenName,lang,annahmen,isSolo); }
     catch(e){ console.error(e); }
     finally { setPdfLoading(false); }
   }
