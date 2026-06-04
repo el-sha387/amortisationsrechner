@@ -84,6 +84,7 @@ async function generateAndSharePDF(
   ergebnis: ReturnType<typeof berechne>, paket: Paket,
   gehalt: number, raumkosten: number, kundenName: string,
   lang: Lang, annahmen: Annahmen, soloMode = false,
+  mengen: Record<string, number> = {},
 ) {
   const t = T[lang];
   const { jsPDF } = await import("jspdf");
@@ -136,17 +137,27 @@ async function generateAndSharePDF(
   doc.setDrawColor(...GOLD_RGB); doc.setLineWidth(0.8); doc.line(M,y,W-M,y); y+=8;
 
   // ── 1. Jahresgewinn Highlight ──────────────────────────────────────────────
+  // Session-Liste aufbauen (nur Typen mit Anzahl > 0)
+  const sessionListe = SESSION_TYPEN
+    .filter(st => (mengen[st.id] ?? 0) > 0)
+    .map(st => `${mengen[st.id]}× ${lang==="de" ? st.name : st.nameEn}`)
+    .join(", ");
+
+  const bannerH = sessionListe ? 40 : 32;
   const positiv = ergebnis.jahresgewinn >= 0;
-  doc.setFillColor(...BLACK_RGB); doc.roundedRect(M,y,CW,32,4,4,"F");
-  // Gold accent bar links
-  doc.setFillColor(...GOLD_RGB); doc.roundedRect(M,y,3,32,2,2,"F");
+  doc.setFillColor(...BLACK_RGB); doc.roundedRect(M,y,CW,bannerH,4,4,"F");
+  doc.setFillColor(...GOLD_RGB); doc.roundedRect(M,y,3,bannerH,2,2,"F");
   doc.setTextColor(...GOLD_RGB); doc.setFont("helvetica","bold"); doc.setFontSize(8);
   doc.text(t.jahresgewinn.toUpperCase(), M+8, y+9);
   doc.setFontSize(28); doc.text(`${positiv?"":"-"}${fmt(Math.abs(ergebnis.jahresgewinn))} €`, M+8, y+25);
   doc.setFontSize(8); doc.setFont("helvetica","normal"); doc.setTextColor(180,180,180);
   doc.text(`= ${fmt(Math.abs(ergebnis.ueberschuss))} € / ${lang==="de"?"Monat":"month"}`, W-M-4, y+14, {align:"right"});
   doc.text(`${ergebnis.sessionsMonat} Sessions / ${lang==="de"?"Monat":"month"} · Paket ${ergebnis.effektivPaket.name}`, W-M-4, y+21, {align:"right"});
-  y+=40;
+  if (sessionListe) {
+    doc.setFontSize(7); doc.setTextColor(150,150,150);
+    doc.text(sessionListe, M+8, y+35);
+  }
+  y += bannerH + 8;
 
   // ── 2. KPI Highlight-Boxen ─────────────────────────────────────────────────
   const col = CW/3-3;
@@ -364,7 +375,7 @@ export default function MobileCalculator() {
     : screen - 1;                                   // 1→0, 2→1, 3→2, 4→3
   async function handlePDF() {
     setPdfLoading(true);
-    try { await generateAndSharePDF(ergebnis,paket,gehalt,raumkosten,kundenName,lang,annahmen,isSolo); }
+    try { await generateAndSharePDF(ergebnis,paket,gehalt,raumkosten,kundenName,lang,annahmen,isSolo,mengen); }
     catch(e){ console.error(e); }
     finally { setPdfLoading(false); }
   }
