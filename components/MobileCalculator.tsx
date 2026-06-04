@@ -432,11 +432,16 @@ export default function MobileCalculator() {
             ))}
           </div>
           <div className="rounded-2xl p-4" style={{background:"rgba(255,255,255,0.06)",border:"1px solid rgba(255,255,255,0.08)"}}>
-            <div className="text-xs font-bold uppercase tracking-wide mb-3 text-white/40">{t.margePerSession}</div>
+            <div className="text-xs font-bold uppercase tracking-wide mb-3 text-white/40">
+              {lang==="de"?"Einnahmen / Session":"Revenue / Session"}
+            </div>
             {SESSION_TYPEN.map(t2=>(
               <div key={t2.id} className="flex justify-between items-center py-2 border-b border-white/5 last:border-0">
                 <span className="text-sm text-white/70">{lang==="de"?t2.name:t2.nameEn}</span>
-                <span className="font-bold text-sm" style={{color:GOLD}}>{fmt(t2.preisNetto-paket.kostenProTwin,0)} €</span>
+                <div className="text-right">
+                  <span className="font-bold text-sm" style={{color:GOLD}}>{t2.preisBrutto} € </span>
+                  <span className="text-xs text-white/40">/ {fmt(t2.preisNetto,2)} € {lang==="de"?"netto":"net"}</span>
+                </div>
               </div>
             ))}
           </div>
@@ -459,9 +464,7 @@ export default function MobileCalculator() {
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-white text-sm">{lang==="de"?t2.name:t2.nameEn}</div>
                   <div className="text-xs text-white/40 mt-0.5">
-                    {t2.dauerMin} Min · <span style={{color:GOLD}}>{t2.preisBrutto} € {lang==="de"?"brutto":"gross"}</span>
-                    <span className="mx-1 opacity-50">/</span>
-                    <span>{fmt(t2.preisNetto,2)} € {lang==="de"?"netto":"net"}</span>
+                    {t2.dauerMin} Min · {lang==="de"?"Marge":"Margin"} <span style={{color:GOLD}}>{fmt(t2.preisNetto-paket.kostenProTwin,0)} €</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-none">
