@@ -459,7 +459,7 @@ export default function MobileCalculator() {
                 <div className="flex-1 min-w-0">
                   <div className="font-semibold text-white text-sm">{lang==="de"?t2.name:t2.nameEn}</div>
                   <div className="text-xs text-white/40 mt-0.5">
-                    {t2.dauerMin} Min · <span style={{color:GOLD}}>{fmt(t2.preisNetto-paket.kostenProTwin,0)} €</span>
+                    {t2.dauerMin} Min · <span style={{color:GOLD}}>{fmt(t2.preisNetto,2)} € {lang==="de"?"netto":"net"}</span>
                   </div>
                 </div>
                 <div className="flex items-center gap-3 flex-none">
